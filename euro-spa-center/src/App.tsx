@@ -75,10 +75,6 @@ export default function App() {
   };
 
   const handleWhatsAppAction = () => {
-  if (typeof (window as any).gtag_report_conversion === 'function') {
-    (window as any).gtag_report_conversion();
-  }
-
   const text = encodeURIComponent(
     `Hello ${SPA_INFO.name}, I would like to inquire about spa therapies.`
   );
