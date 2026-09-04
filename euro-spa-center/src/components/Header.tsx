@@ -54,12 +54,20 @@ export function Header({
 
       {/* Hero Banner with Clean Minimalist Overlay */}
       <div className="relative w-full h-52 sm:h-60 md:h-64 overflow-hidden bg-gray-200">
-        <img 
-          src="https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w1600-h900-k-no" 
-          alt="Euro Spa Center Ambience"
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover object-center scale-102"
-        />
+        <img
+            src="https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w800-h450-k-no"
+            srcSet="
+              https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w800-h450-k-no 800w,
+              https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w1600-h900-k-no 1600w
+            "
+            sizes="(max-width: 640px) 100vw, 1600px"
+            alt="Euro Spa Center Ambience"
+            referrerPolicy="no-referrer"
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            className="w-full h-full object-cover object-center"
+          />
         {/* Soft natural gradient */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/20 to-transparent" />
         
