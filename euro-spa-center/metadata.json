@@ -1,0 +1,6 @@
+{
+  "name": "Euro Spa Center",
+  "description": "Euro Spa Center is a premium spa and wellness center located in Banani, Dhaka. Experience Swedish, Deep Tissue, Aromatherapy, and Hot Stone massages.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

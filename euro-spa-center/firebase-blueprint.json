@@ -1,0 +1,51 @@
+{
+  "collections": {
+    "users": {
+      "description": "User profiles authenticated via Firebase Google Sign-In",
+      "fields": {
+        "uid": "string",
+        "email": "string",
+        "displayName": "string",
+        "photoURL": "string",
+        "createdAt": "timestamp"
+      }
+    },
+    "appointments": {
+      "description": "Spa treatment booking appointments submitted by users",
+      "fields": {
+        "userId": "string",
+        "userName": "string",
+        "userEmail": "string",
+        "phone": "string",
+        "serviceName": "string",
+        "duration": "string",
+        "price": "string",
+        "preferredDate": "string",
+        "preferredTime": "string",
+        "status": "string",
+        "createdAt": "timestamp"
+      }
+    },
+    "reviews": {
+      "description": "Client reviews and ratings",
+      "fields": {
+        "userId": "string",
+        "userName": "string",
+        "userPhoto": "string",
+        "rating": "number",
+        "comment": "string",
+        "createdAt": "timestamp"
+      }
+    },
+    "google_business_sync": {
+      "description": "Synced Google Business Profile data including rating, reviews count, latest reviews and photos",
+      "fields": {
+        "rating": "number",
+        "reviewsCount": "number",
+        "lastSyncedAt": "timestamp",
+        "reviews": "array",
+        "photos": "array"
+      }
+    }
+  }
+}
