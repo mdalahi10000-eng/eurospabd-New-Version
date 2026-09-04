@@ -31,6 +31,7 @@ export function LocationContactSection({
             >
               <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#94a3b8_1px,transparent_1px)] [background-size:16px_16px]" />
 
+              {/* Decorative street grid lines */}
               <svg
                 className="absolute inset-0 w-full h-full stroke-gray-300 fill-none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -57,6 +58,7 @@ export function LocationContactSection({
                 />
               </svg>
 
+              {/* Pin Pill Label */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-2 bg-white/95 px-3 py-1.5 rounded-full shadow-md border border-gray-200 group-hover:scale-105 transition-transform">
                 <div className="w-3.5 h-3.5 rounded-full bg-red-600 ring-4 ring-red-100 flex items-center justify-center shrink-0">
                   <div className="w-1.5 h-1.5 rounded-full bg-white" />
@@ -66,18 +68,20 @@ export function LocationContactSection({
                   <p className="text-xs font-bold text-gray-900 leading-tight">
                     {SPA_INFO.name}
                   </p>
+
                   <p className="text-[11px] text-gray-500 font-medium leading-tight">
                     {SPA_INFO.locationShort}
                   </p>
                 </div>
               </div>
 
+              {/* Tap to expand overlay */}
               <div className="absolute bottom-2 right-2 bg-gray-900/75 text-white text-[10px] font-medium px-2 py-0.5 rounded-md backdrop-blur-xs">
                 Tap to explore
               </div>
             </div>
 
-            {/* Get Directions */}
+            {/* Get Directions Button */}
             <button
               id="btn-get-directions-bottom"
               onClick={onDirectionsClick}
@@ -114,16 +118,7 @@ export function LocationContactSection({
 
               {/* WhatsApp */}
               <button
-                onClick={() => {
-                  if (
-                    typeof (window as any).gtag_report_conversion ===
-                    'function'
-                  ) {
-                    (window as any).gtag_report_conversion();
-                  }
-
-                  onWhatsAppClick();
-                }}
+                onClick={onWhatsAppClick}
                 className="w-full flex items-center gap-3 text-gray-700 hover:text-green-700 text-left cursor-pointer group"
               >
                 <div className="w-7 h-7 rounded-full bg-green-50 flex items-center justify-center shrink-0 group-hover:bg-green-100 transition-colors">
@@ -166,7 +161,7 @@ export function LocationContactSection({
               </div>
             </div>
 
-            {/* Book Appointment */}
+            {/* Book Appointment Button */}
             <button
               id="btn-book-appointment-bottom"
               onClick={onBookAppointmentClick}
