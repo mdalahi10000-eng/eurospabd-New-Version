@@ -24,6 +24,8 @@
     "vite": "^6.2.3"
   },
   "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.13.10",
+    "wrangler": "^4.36.0",
     "@types/node": "^22.14.0",
     "autoprefixer": "^10.4.21",
     "esbuild": "^0.25.0",
