@@ -75,6 +75,12 @@ export default function App() {
   };
 
   const handleWhatsAppAction = () => {
+  // Send WhatsApp click event to Google Tag Manager
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: 'whatsapp_click'
+  });
+
   const text = encodeURIComponent(
     `Hello ${SPA_INFO.name}, I would like to inquire about spa therapies.`
   );
