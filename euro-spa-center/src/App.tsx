@@ -75,9 +75,20 @@ export default function App() {
   };
 
   const handleWhatsAppAction = () => {
-    const text = encodeURIComponent(`Hello ${SPA_INFO.name}, I would like to inquire about spa therapies.`);
-    window.open(`https://wa.me/${SPA_INFO.whatsappNumber}?text=${text}`, '_blank', 'noopener,noreferrer');
-  };
+  if (typeof (window as any).gtag_report_conversion === 'function') {
+    (window as any).gtag_report_conversion();
+  }
+
+  const text = encodeURIComponent(
+    `Hello ${SPA_INFO.name}, I would like to inquire about spa therapies.`
+  );
+
+  window.open(
+    `https://wa.me/${SPA_INFO.whatsappNumber}?text=${text}`,
+    '_blank',
+    'noopener,noreferrer'
+  );
+};
 
   const handleShare = async () => {
     const shareData = {
