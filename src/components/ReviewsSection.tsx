@@ -8,13 +8,15 @@ interface ReviewsSectionProps {
   onWriteReviewClick: () => void;
   firebaseReviews?: StoredReview[];
   syncedReviews?: ReviewItem[];
+  loading?: boolean;
 }
 
 export function ReviewsSection({ 
   onOpenReviewsModal, 
   onWriteReviewClick,
   firebaseReviews = [],
-  syncedReviews
+  syncedReviews,
+  loading = false
 }: ReviewsSectionProps) {
   const baseReviews = (syncedReviews && syncedReviews.length > 0) ? syncedReviews : INITIAL_REVIEWS;
 
@@ -65,8 +67,35 @@ export function ReviewsSection({
       </div>
 
       {/* 3 Review Cards matching Clean Minimalism */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {topReviews.map((review) => (
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="bg-white rounded-2xl border border-gray-100 p-4 shadow-xs animate-pulse space-y-3"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-full bg-gray-200 shrink-0" />
+                <div className="space-y-1.5 flex-1">
+                  <div className="h-3.5 bg-gray-200 rounded w-1/2" />
+                  <div className="h-2.5 bg-gray-200 rounded w-1/3" />
+                </div>
+              </div>
+              <div className="space-y-1.5 pt-1">
+                <div className="h-3 bg-gray-200 rounded w-full" />
+                <div className="h-3 bg-gray-200 rounded w-4/5" />
+                <div className="h-3 bg-gray-200 rounded w-2/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : topReviews.length === 0 ? (
+        <div className="py-6 text-center text-xs text-gray-400">
+          No reviews available at this time.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {topReviews.map((review) => (
           <div
             key={review.id}
             id={`review-card-${review.id}`}
@@ -112,6 +141,7 @@ export function ReviewsSection({
           </div>
         ))}
       </div>
+      )}
     </section>
   );
 }

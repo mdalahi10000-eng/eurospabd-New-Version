@@ -23,7 +23,7 @@ export const SPA_INFO = {
     lat: 23.7931511,
     lng: 90.4030721
   },
-  description: "Euro Spa Center is a premium spa and wellness center located in Banani, Dhaka. We offer professional Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, Four Hand Massage, Body Scrub, and complete wellness therapy. Experience relaxation in a peaceful, hygienic, and luxurious environment with certified therapists."
+  description: "Euro Spa Center is a premium spa and wellness center located in Banani, Dhaka. We offer professional Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, Body Scrub, and complete wellness therapy. Experience relaxation in a peaceful, hygienic, and luxurious environment with certified therapists."
 };
 
 export const SERVICES_DATA: Service[] = [
@@ -97,59 +97,7 @@ export const SERVICES_DATA: Service[] = [
     "Promotes relaxation",
     "Calming massage experience"
   ]
-},
-  {
-    id: "body-to-body",
-    name: "Body to Body Massage",
-    durationRange: "60 / 90 Minutes",
-    shortDescription: "A premium massage service available in 60 and 90 minute sessions.",
-    fullDescription: "A premium massage experience at Euro Spa Center designed around relaxation and a comfortable private spa environment.",
-    image: "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w1200-h800-k-no",
-    priceOptions: [
-      { duration: "60 Minutes", price: "BDT 6,500", amount: 6500 },
-      { duration: "90 Minutes", price: "BDT 8,500", amount: 8500 }
-    ],
-    benefits: [
-      "Premium relaxation",
-      "Private spa experience",
-      "Comfortable session"
-    ]
-  },
-  {
-    id: "four-hand",
-    name: "Four Hand Massage",
-    durationRange: "60 / 90 Minutes",
-    shortDescription: "A premium four hand massage experience designed for deep relaxation and comfort.",
-    fullDescription: "A premium four hand massage session providing a coordinated and relaxing spa experience at Euro Spa Center.",
-    image: "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
-    priceOptions: [
-      { duration: "60 Minutes", price: "BDT 14,000", amount: 14000 },
-      { duration: "90 Minutes", price: "BDT 19,500", amount: 19500 }
-    ],
-    benefits: [
-      "Premium massage experience",
-      "Coordinated massage technique",
-      "Deep relaxation"
-    ]
-  },
-  {
-    id: "six-hand",
-    name: "Six Hand Massage",
-    durationRange: "60 / 90 / 120 Minutes",
-    shortDescription: "A premium six hand massage experience available in three session durations.",
-    fullDescription: "An exclusive premium massage experience at Euro Spa Center with 60, 90, and 120 minute options.",
-    image: "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w1200-h800-k-no",
-    priceOptions: [
-      { duration: "60 Minutes", price: "BDT 18,000", amount: 18000 },
-      { duration: "90 Minutes", price: "BDT 25,000", amount: 25000 },
-      { duration: "120 Minutes", price: "BDT 30,000", amount: 30000 }
-    ],
-    benefits: [
-      "Exclusive premium experience",
-      "Extended relaxation session",
-      "Multiple duration options"
-    ]
-  }
+}
 ];
 
 export const INITIAL_REVIEWS: ReviewItem[] = [

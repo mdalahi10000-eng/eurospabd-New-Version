@@ -43,8 +43,12 @@ export default function App() {
   const [firebaseReviews, setFirebaseReviews] = useState<StoredReview[]>([]);
   const [syncedGoogleData, setSyncedGoogleData] = useState<SyncedGoogleData | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [services, setServices] = useState<Service[]>(SERVICES_DATA);
-  const [galleryImages, setGalleryImages] = useState<PhotoItem[]>(PHOTOS_DATA);
+  const [services, setServices] = useState<Service[]>([]);
+  const [servicesLoading, setServicesLoading] = useState<boolean>(true);
+  const [servicesError, setServicesError] = useState<boolean>(false);
+  const [galleryImages, setGalleryImages] = useState<PhotoItem[]>([]);
+  const [galleryLoading, setGalleryLoading] = useState<boolean>(true);
+  const [reviewsLoading, setReviewsLoading] = useState<boolean>(true);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(DEFAULT_BUSINESS_INFO);
   const [serviceAreas, setServiceAreas] = useState<ServiceArea[]>([]);
   const [homepageContent, setHomepageContent] = useState<HomepageContent>(DEFAULT_HOMEPAGE_CONTENT);
@@ -67,23 +71,55 @@ export default function App() {
   // Fetch live active services from Firestore
   useEffect(() => {
     let isMounted = true;
-    fetchPublicServices().then((items) => {
-      if (isMounted && items && items.length > 0) {
-        setServices(items);
-      }
-    }).catch(err => console.warn('Could not load services:', err));
-    return () => { isMounted = false; };
+    fetchPublicServices()
+      .then((items) => {
+        if (isMounted) {
+          if (items && items.length > 0) {
+            setServices(items);
+          } else {
+            setServices([]);
+          }
+          setServicesLoading(false);
+          setServicesError(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load services:', err);
+        if (isMounted) {
+          setServices(SERVICES_DATA);
+          setServicesError(true);
+          setServicesLoading(false);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Fetch live active gallery photos from Firestore
   useEffect(() => {
     let isMounted = true;
-    fetchPublicGallery().then((items) => {
-      if (isMounted && items && items.length > 0) {
-        setGalleryImages(items);
-      }
-    }).catch(err => console.warn('Could not load gallery:', err));
-    return () => { isMounted = false; };
+    fetchPublicGallery()
+      .then((items) => {
+        if (isMounted) {
+          if (items && items.length > 0) {
+            setGalleryImages(items);
+          } else {
+            setGalleryImages(PHOTOS_DATA);
+          }
+          setGalleryLoading(false);
+        }
+      })
+      .catch((err) => {
+        console.warn('Could not load gallery:', err);
+        if (isMounted) {
+          setGalleryImages(PHOTOS_DATA);
+          setGalleryLoading(false);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Fetch live canonical business info and active service areas from Firestore
@@ -153,6 +189,7 @@ export default function App() {
   useEffect(() => {
     const unsubReviews = subscribeToReviews((revs) => {
       setFirebaseReviews(revs);
+      setReviewsLoading(false);
     });
     return () => unsubReviews();
   }, []);
@@ -162,6 +199,7 @@ export default function App() {
     const unsubGbp = subscribeToGoogleBusinessSync((data) => {
       if (data) {
         setSyncedGoogleData(data);
+        setReviewsLoading(false);
       }
     });
     return () => unsubGbp();
@@ -431,6 +469,8 @@ export default function App() {
         {/* Signature Services */}
         <ServicesSection
           services={services}
+          loading={servicesLoading}
+          error={servicesError}
           onSelectService={(service) => setSelectedService(service)}
           onViewAllServices={() => {
             setBookingPreselectedService(null);
@@ -443,6 +483,7 @@ export default function App() {
         <PhotosSection
           syncedPhotos={syncedGoogleData?.photos}
           galleryImages={galleryImages}
+          loading={galleryLoading}
           onOpenPhotosModal={(index = 0) => {
             setPhotosInitialIndex(index);
             setIsPhotosModalOpen(true);
@@ -453,6 +494,7 @@ export default function App() {
         <ReviewsSection
           firebaseReviews={firebaseReviews}
           syncedReviews={syncedGoogleData?.reviews}
+          loading={reviewsLoading}
           onOpenReviewsModal={() => {
             setReviewsWriteMode(false);
             setIsReviewsModalOpen(true);
@@ -566,7 +608,7 @@ export default function App() {
         preselectedService={bookingPreselectedService}
         preselectedOption={bookingPreselectedOption}
         onBookingSuccess={() => showToast('Appointment booked successfully!')}
-        availableServices={services}
+        availableServices={services.length > 0 ? services : SERVICES_DATA}
       />
 
       {/* 6. Call Reception Modal */}

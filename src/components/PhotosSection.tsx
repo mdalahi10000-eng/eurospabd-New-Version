@@ -7,9 +7,10 @@ interface PhotosSectionProps {
   onOpenPhotosModal: (index?: number) => void;
   syncedPhotos?: PhotoItem[];
   galleryImages?: PhotoItem[];
+  loading?: boolean;
 }
 
-export function PhotosSection({ onOpenPhotosModal, syncedPhotos, galleryImages }: PhotosSectionProps) {
+export function PhotosSection({ onOpenPhotosModal, syncedPhotos, galleryImages, loading = false }: PhotosSectionProps) {
   const [failedIds, setFailedIds] = useState<Set<string>>(new Set());
   const photoSource = (galleryImages && galleryImages.length > 0)
     ? galleryImages
@@ -32,9 +33,11 @@ export function PhotosSection({ onOpenPhotosModal, syncedPhotos, galleryImages }
           <h2 className="text-lg font-bold text-gray-900 tracking-tight">
             Photos
           </h2>
-          <span className="text-xs font-medium text-gray-500">
-            ({cleanPhotos.length})
-          </span>
+          {!loading && (
+            <span className="text-xs font-medium text-gray-500">
+              ({cleanPhotos.length})
+            </span>
+          )}
           <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 bg-blue-50 border border-blue-200/60 px-2 py-0.5 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
             Google Business
@@ -51,7 +54,17 @@ export function PhotosSection({ onOpenPhotosModal, syncedPhotos, galleryImages }
       </div>
 
       {/* Smoothly scrollable/swipeable Photos Row showing all authentic photos */}
-      <div className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-1.5 pt-0.5 -mx-1 px-1 scroll-smooth snap-x snap-mandatory no-scrollbar">
+      {loading ? (
+        <div className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-1.5 pt-0.5 -mx-1 px-1 scroll-smooth snap-x snap-mandatory no-scrollbar">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="shrink-0 w-[42%] sm:w-[32%] md:w-[24%] aspect-4/3 rounded-xl bg-gray-100 border border-gray-100 animate-pulse"
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="flex gap-2 sm:gap-2.5 overflow-x-auto pb-1.5 pt-0.5 -mx-1 px-1 scroll-smooth snap-x snap-mandatory no-scrollbar">
         {cleanPhotos.map((photo, index) => (
           <button
             key={photo.id}
@@ -78,6 +91,7 @@ export function PhotosSection({ onOpenPhotosModal, syncedPhotos, galleryImages }
           </button>
         ))}
       </div>
+      )}
     </section>
   );
 }

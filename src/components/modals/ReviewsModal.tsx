@@ -320,9 +320,6 @@ export function ReviewsModal({
                       <option>Dry Massage</option>
                       <option>Oil Massage</option>
                       <option>Aroma Body Massage</option>
-                      <option>Body to Body Massage</option>
-                      <option>Four Hand Massage</option>
-                      <option>Six Hand Massage</option>
                         </select>
                       </div>
                     </div>

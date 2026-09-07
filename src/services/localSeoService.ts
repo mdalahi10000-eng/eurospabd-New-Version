@@ -33,7 +33,7 @@ export const DEFAULT_REGULAR_HOURS: RegularHours = {
 export const DEFAULT_BUSINESS_INFO: BusinessInfo = {
   businessName: SPA_INFO.name || 'Euro Spa Center',
   tagline: SPA_INFO.tagline || 'Relax • Refresh • Rejuvenate',
-  description: SPA_INFO.description || 'Euro Spa Center is a premium spa and wellness center located in Banani, Dhaka. We offer professional Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, Four Hand Massage, Body Scrub, and complete wellness therapy. Experience relaxation in a peaceful, hygienic, and luxurious environment with certified therapists.',
+  description: SPA_INFO.description || 'Euro Spa Center is a premium spa and wellness center located in Banani, Dhaka. We offer professional Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, Body Scrub, and complete wellness therapy. Experience relaxation in a peaceful, hygienic, and luxurious environment with certified therapists.',
   primaryCategory: 'DaySpa',
   secondaryCategories: [
     'HealthAndBeautyBusiness',

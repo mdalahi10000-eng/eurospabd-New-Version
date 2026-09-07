@@ -54,9 +54,16 @@ export function FaqSection({ onWhatsAppClick, onCallClick }: FaqSectionProps) {
         </div>
 
         {loading ? (
-          <div className="py-8 text-center text-xs text-gray-400">
-            <div className="w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-            Loading FAQs...
+          <div className="space-y-2.5 pt-1">
+            {[1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-gray-100 bg-gray-50/70 p-4 animate-pulse flex items-center justify-between"
+              >
+                <div className="h-4 bg-gray-200 rounded w-2/3" />
+                <div className="w-4 h-4 bg-gray-200 rounded-full" />
+              </div>
+            ))}
           </div>
         ) : (
           <div className="space-y-2.5 pt-1">

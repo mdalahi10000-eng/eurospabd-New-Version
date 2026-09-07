@@ -176,12 +176,11 @@ export async function fetchPublicServices(): Promise<Service[]> {
       return list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
     }
 
-    // If Firestore empty, public users simply use the existing static fallback.
-    // Do not trigger automatic seeding on unauthenticated public requests.
-    return SERVICES_DATA.map((s, idx) => mapStaticServiceToFullService(s, idx));
+    // Collection returned empty
+    return [];
   } catch (err) {
     console.warn('Public services fetch notice:', err);
-    return SERVICES_DATA.map((s, idx) => mapStaticServiceToFullService(s, idx));
+    throw err;
   }
 }
 
