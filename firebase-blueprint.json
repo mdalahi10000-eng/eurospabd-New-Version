@@ -1,0 +1,153 @@
+{
+  "collections": {
+    "users": {
+      "description": "User profiles authenticated via Firebase Google Sign-In",
+      "fields": {
+        "uid": "string",
+        "email": "string",
+        "displayName": "string",
+        "photoURL": "string",
+        "role": "string",
+        "createdAt": "timestamp"
+      }
+    },
+    "admins": {
+      "description": "Admin accounts with full access to CMS and management",
+      "fields": {
+        "uid": "string",
+        "email": "string",
+        "role": "string",
+        "assignedAt": "timestamp"
+      }
+    },
+    "appointments": {
+      "description": "Spa treatment booking appointments submitted by users",
+      "fields": {
+        "userId": "string",
+        "userName": "string",
+        "userEmail": "string",
+        "phone": "string",
+        "serviceName": "string",
+        "duration": "string",
+        "price": "string",
+        "preferredDate": "string",
+        "preferredTime": "string",
+        "status": "string",
+        "notes": "string",
+        "createdAt": "timestamp",
+        "updatedAt": "timestamp"
+      }
+    },
+    "reviews": {
+      "description": "Client reviews and ratings",
+      "fields": {
+        "userId": "string",
+        "userName": "string",
+        "userPhoto": "string",
+        "rating": "number",
+        "comment": "string",
+        "status": "string",
+        "adminResponse": "string",
+        "adminRespondedAt": "timestamp",
+        "createdAt": "timestamp"
+      }
+    },
+    "articles": {
+      "description": "Blog articles and wellness guides",
+      "fields": {
+        "title": "string",
+        "slug": "string",
+        "excerpt": "string",
+        "content": "string",
+        "featuredImage": "string",
+        "category": "string",
+        "author": "string",
+        "status": "string",
+        "seoTitle": "string",
+        "metaDescription": "string",
+        "tags": "array",
+        "createdAt": "timestamp",
+        "publishedAt": "timestamp"
+      }
+    },
+    "google_business_sync": {
+      "description": "Synced Google Business Profile data including rating, reviews count, latest reviews and photos",
+      "fields": {
+        "rating": "number",
+        "reviewsCount": "number",
+        "lastSyncedAt": "timestamp",
+        "reviews": "array",
+        "photos": "array"
+      }
+    },
+    "gallery": {
+      "description": "Media library and gallery images for public website and services",
+      "fields": {
+        "title": "string",
+        "altText": "string",
+        "caption": "string",
+        "description": "string",
+        "category": "string",
+        "image": "string",
+        "fallbackImage": "string",
+        "storagePath": "string",
+        "displayOrder": "number",
+        "status": "string",
+        "createdAt": "timestamp",
+        "updatedAt": "string"
+      }
+    },
+    "siteSettings": {
+      "description": "Centralized business identity, NAP, operating hours, social profiles and local SEO configuration",
+      "fields": {
+        "businessName": "string",
+        "tagline": "string",
+        "description": "string",
+        "primaryCategory": "string",
+        "secondaryCategories": "array",
+        "phone": "string",
+        "displayPhone": "string",
+        "whatsappNumber": "string",
+        "whatsappFormatted": "string",
+        "email": "string",
+        "websiteUrl": "string",
+        "fullAddress": "string",
+        "addressLine": "string",
+        "city": "string",
+        "area": "string",
+        "postalCode": "string",
+        "country": "string",
+        "latitude": "number",
+        "longitude": "number",
+        "googleMapsUrl": "string",
+        "googlePlaceId": "string",
+        "googleCid": "string",
+        "regularHours": "map",
+        "specialHours": "array",
+        "displayStatus": "string",
+        "displayHours": "string",
+        "priceRange": "string",
+        "socialProfiles": "map",
+        "schemaType": "string",
+        "updatedAt": "string",
+        "updatedBy": "string"
+      }
+    },
+    "serviceAreas": {
+      "description": "Target local service areas and landing pages (Banani, Gulshan, Baridhara, etc.)",
+      "fields": {
+        "name": "string",
+        "slug": "string",
+        "shortDescription": "string",
+        "content": "string",
+        "status": "string",
+        "seoTitle": "string",
+        "metaDescription": "string",
+        "focusKeyword": "string",
+        "displayOrder": "number",
+        "createdAt": "timestamp",
+        "updatedAt": "string"
+      }
+    }
+  }
+}

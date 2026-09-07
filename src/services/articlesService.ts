@@ -1,0 +1,407 @@
+import { 
+  collection, 
+  getDocs, 
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  query, 
+  where, 
+  limit,
+  serverTimestamp 
+} from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../firebase';
+import { Article } from '../types';
+import { SERVICES_DATA, PHOTOS_DATA } from '../data/spaData';
+
+/**
+ * Utility: generate SEO-friendly slug from text
+ */
+export function generateSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Utility: calculate estimated reading time in minutes
+ */
+export function calculateReadingTime(content: string): number {
+  const words = content.trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.ceil(words / 180));
+}
+
+/**
+ * Check if a slug is already taken by another article
+ */
+export async function checkSlugAvailability(slug: string, excludeId?: string): Promise<boolean> {
+  if (!slug) return false;
+  try {
+    const q = query(collection(db, 'articles'), where('slug', '==', slug));
+    const snap = await getDocs(q);
+    if (snap.empty) return true;
+    if (excludeId && snap.docs.length === 1 && snap.docs[0].id === excludeId) {
+      return true;
+    }
+    return false;
+  } catch (err) {
+    console.warn('Error checking slug availability:', err);
+    return true; // Fallback to allow submission
+  }
+}
+
+/**
+ * Upload an article featured image to Firebase Storage
+ */
+export async function uploadArticleImage(
+  file: File, 
+  onProgress?: (percentage: number) => void
+): Promise<string> {
+  // Clean filename and add timestamp
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const storagePath = `articles/${Date.now()}_${sanitizedName}`;
+  const storageRef = ref(storage, storagePath);
+
+  return new Promise((resolve, reject) => {
+    const uploadTask = uploadBytesResumable(storageRef, file, {
+      contentType: file.type || 'image/jpeg',
+    });
+
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        if (onProgress && snapshot.totalBytes > 0) {
+          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          onProgress(progress);
+        }
+      },
+      (error) => {
+        console.error('Firebase Storage upload error:', error);
+        reject(new Error(error.message || 'Failed to upload image to Firebase Storage.'));
+      },
+      async () => {
+        try {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadUrl);
+        } catch (err) {
+          reject(err);
+        }
+      }
+    );
+  });
+}
+
+/**
+ * Fetch all articles (both Draft and Published) for the Admin CMS
+ */
+export async function fetchAllArticlesAdmin(): Promise<Article[]> {
+  try {
+    const snap = await getDocs(collection(db, 'articles'));
+    if (!snap.empty) {
+      const list = snap.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      } as Article));
+
+      // Sort by updatedAt or createdAt desc
+      return list.sort((a, b) => {
+        const timeA = new Date(a.updatedAt || a.publishedAt || (a.createdAt?.toDate ? a.createdAt.toDate() : 0)).getTime();
+        const timeB = new Date(b.updatedAt || b.publishedAt || (b.createdAt?.toDate ? b.createdAt.toDate() : 0)).getTime();
+        return timeB - timeA;
+      });
+    }
+  } catch (err) {
+    console.error('Error fetching admin articles:', err);
+  }
+  return [];
+}
+
+/**
+ * Create a new article in Firestore
+ */
+export async function createArticle(data: Omit<Article, 'id'>): Promise<string> {
+  const readingTime = calculateReadingTime(data.content);
+  const nowStr = new Date().toISOString();
+
+  const articlePayload = {
+    title: data.title.trim(),
+    slug: data.slug.trim(),
+    excerpt: data.excerpt.trim(),
+    content: data.content,
+    featuredImage: data.featuredImage || '/photos/Image_Aug.png',
+    imageAlt: data.imageAlt?.trim() || data.title.trim(),
+    category: data.category?.trim() || 'Therapy & Wellness',
+    author: data.author?.trim() || 'Euro Spa Team',
+    status: data.status || 'draft',
+    publishedAt: data.publishedAt || (data.status === 'published' ? new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''),
+    updatedAt: nowStr,
+    createdAt: serverTimestamp(),
+    seoTitle: data.seoTitle?.trim() || `${data.title.trim()} | Euro Spa Center Banani`,
+    metaDescription: data.metaDescription?.trim() || data.excerpt.trim(),
+    focusKeyword: data.focusKeyword?.trim() || '',
+    canonicalUrl: data.canonicalUrl?.trim() || '',
+    ogTitle: data.ogTitle?.trim() || data.seoTitle?.trim() || data.title.trim(),
+    ogDescription: data.ogDescription?.trim() || data.metaDescription?.trim() || data.excerpt.trim(),
+    ogImage: data.ogImage?.trim() || data.featuredImage || '',
+    tags: Array.isArray(data.tags) ? data.tags : [],
+    readingTimeMinutes: readingTime
+  };
+
+  const docRef = await addDoc(collection(db, 'articles'), articlePayload);
+  return docRef.id;
+}
+
+/**
+ * Update an existing article in Firestore
+ */
+export async function updateArticle(id: string, updates: Partial<Article>): Promise<void> {
+  const articleRef = doc(db, 'articles', id);
+  const nowStr = new Date().toISOString();
+
+  const cleanedUpdates: any = {
+    ...updates,
+    updatedAt: nowStr
+  };
+
+  if (updates.content) {
+    cleanedUpdates.readingTimeMinutes = calculateReadingTime(updates.content);
+  }
+
+  // Remove undefined fields
+  Object.keys(cleanedUpdates).forEach(key => {
+    if (cleanedUpdates[key] === undefined) {
+      delete cleanedUpdates[key];
+    }
+  });
+
+  await updateDoc(articleRef, cleanedUpdates);
+}
+
+/**
+ * Delete an article from Firestore
+ */
+export async function deleteArticle(id: string): Promise<void> {
+  const articleRef = doc(db, 'articles', id);
+  await deleteDoc(articleRef);
+}
+
+/**
+ * Quick toggle publish / unpublish status
+ */
+export async function toggleArticlePublish(article: Article): Promise<'draft' | 'published'> {
+  const newStatus = article.status === 'published' ? 'draft' : 'published';
+  const updates: Partial<Article> = {
+    status: newStatus
+  };
+
+  // If publishing for the first time or missing publishedAt, populate it
+  if (newStatus === 'published' && !article.publishedAt) {
+    updates.publishedAt = new Date().toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  }
+
+  await updateArticle(article.id, updates);
+  return newStatus;
+}
+
+/**
+ * Fetch all published articles from Firestore.
+ * Strictly queries Firebase Firestore without creating fake articles.
+ * Returns an empty array if there are currently no published articles.
+ */
+export async function fetchPublishedArticles(): Promise<Article[]> {
+  try {
+    const q = query(
+      collection(db, 'articles'),
+      where('status', '==', 'published')
+    );
+    const snapshot = await getDocs(q);
+    
+    if (!snapshot.empty) {
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Article));
+
+      return list.sort((a, b) => {
+        const timeA = new Date(a.publishedAt || (a.createdAt?.toDate ? a.createdAt.toDate() : 0)).getTime();
+        const timeB = new Date(b.publishedAt || (b.createdAt?.toDate ? b.createdAt.toDate() : 0)).getTime();
+        return timeB - timeA;
+      });
+    }
+  } catch (err) {
+    console.warn('Firestore articles query notice:', err);
+  }
+
+  return [];
+}
+
+/**
+ * Fetch a single published article by its SEO-friendly slug.
+ * Draft or unpublished articles will return null and are not publicly accessible.
+ */
+export async function fetchArticleBySlug(slug: string): Promise<Article | null> {
+  try {
+    const q = query(
+      collection(db, 'articles'),
+      where('slug', '==', slug),
+      where('status', '==', 'published'),
+      limit(1)
+    );
+    const snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as Article;
+    }
+  } catch (err) {
+    console.warn('Article query error for slug:', slug, err);
+  }
+
+  return null;
+}
+
+/**
+ * Fetch related published articles (excluding the current one)
+ */
+export async function fetchRelatedArticles(currentArticleId: string, category?: string): Promise<Article[]> {
+  try {
+    const all = await fetchPublishedArticles();
+    return all
+      .filter(a => a.id !== currentArticleId && a.status === 'published')
+      .slice(0, 3);
+  } catch (err) {
+    console.warn('Related articles query error:', err);
+    return [];
+  }
+}
+
+export interface AdminStats {
+  totalServices: number;
+  totalAppointments: number;
+  pendingAppointments: number;
+  confirmedAppointments: number;
+  totalReviews: number;
+  approvedReviews: number;
+  averageRating: number;
+  publishedArticles: number;
+  totalArticles: number;
+  galleryImages: number;
+  recentAppointments: any[];
+  recentReviews: any[];
+}
+
+/**
+ * Fetch real statistics for the Admin Dashboard from Firestore
+ */
+export async function fetchAdminStats(): Promise<AdminStats> {
+  let totalAppointments = 0;
+  let pendingAppointments = 0;
+  let confirmedAppointments = 0;
+  let totalReviews = 0;
+  let approvedReviews = 0;
+  let averageRating = 4.9;
+  let publishedArticles = 0;
+  let totalArticles = 0;
+  let recentAppointments: any[] = [];
+  let recentReviews: any[] = [];
+
+  try {
+    const appointmentsSnap = await getDocs(collection(db, 'appointments'));
+    totalAppointments = appointmentsSnap.size;
+    const allAppts = appointmentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    
+    // Sort recent if timestamp exists
+    allAppts.sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    });
+
+    recentAppointments = allAppts.slice(0, 5);
+    allAppts.forEach(a => {
+      if (a.status === 'pending') pendingAppointments++;
+      else if (a.status === 'confirmed') confirmedAppointments++;
+    });
+  } catch (e) {
+    console.warn('Appointments count notice:', e);
+  }
+
+  try {
+    const reviewsSnap = await getDocs(collection(db, 'reviews'));
+    totalReviews = reviewsSnap.size;
+    const allRevs = reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
+    
+    let sumRate = 0;
+    allRevs.forEach(r => {
+      if (r.status !== 'hidden') approvedReviews++;
+      sumRate += typeof r.rating === 'number' ? r.rating : 5;
+    });
+
+    if (allRevs.length > 0) {
+      averageRating = parseFloat((sumRate / allRevs.length).toFixed(1));
+    }
+
+    allRevs.sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    });
+    recentReviews = allRevs.slice(0, 4);
+  } catch (e) {
+    console.warn('Reviews count notice:', e);
+  }
+
+  try {
+    const allArticlesSnap = await getDocs(collection(db, 'articles'));
+    totalArticles = allArticlesSnap.size;
+    const pubSnap = await getDocs(
+      query(collection(db, 'articles'), where('status', '==', 'published'))
+    );
+    publishedArticles = pubSnap.size;
+  } catch (e) {
+    console.warn('Articles count notice:', e);
+  }
+
+  let totalServices = SERVICES_DATA.length;
+  try {
+    const servicesSnap = await getDocs(collection(db, 'services'));
+    if (!servicesSnap.empty) {
+      totalServices = servicesSnap.size;
+    }
+  } catch (e) {
+    console.warn('Services count notice:', e);
+  }
+
+  let galleryImages = PHOTOS_DATA.length;
+  try {
+    const gallerySnap = await getDocs(collection(db, 'gallery'));
+    if (!gallerySnap.empty) {
+      galleryImages = gallerySnap.size;
+    }
+  } catch (e) {
+    console.warn('Gallery count notice:', e);
+  }
+
+  return {
+    totalServices,
+    totalAppointments,
+    pendingAppointments,
+    confirmedAppointments,
+    totalReviews,
+    approvedReviews,
+    averageRating,
+    publishedArticles,
+    totalArticles,
+    galleryImages,
+    recentAppointments,
+    recentReviews
+  };
+}
