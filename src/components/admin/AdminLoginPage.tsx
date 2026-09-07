@@ -187,9 +187,9 @@ export function AdminLoginPage({ onSuccess }: AdminLoginPageProps) {
                 <p className="text-[11px] text-slate-400 leading-relaxed">
                   Only Google accounts designated in the secure <code>/admins</code> collection are granted administrative access. Unauthorized accounts are automatically denied and signed out.
                 </p>
-                <div className="pt-1 flex items-center gap-1.5 text-[10px] text-emerald-400 font-mono">
+                <div className="pt-1 flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium">
                   <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                  <span>Active Super-Admin: mdalahi10000@gmail.com</span>
+                  <span>Authorized administrators only</span>
                 </div>
               </div>
             </div>
