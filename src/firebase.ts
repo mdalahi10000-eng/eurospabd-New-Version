@@ -2,11 +2,7 @@ import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
   GoogleAuthProvider, 
-  EmailAuthProvider,
   signInWithPopup, 
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  linkWithCredential,
   signOut, 
   onAuthStateChanged,
   User 
@@ -109,35 +105,6 @@ export async function checkIsAdmin(user: User | null): Promise<boolean> {
   } catch {
     return false;
   }
-}
-
-export async function loginWithEmailPassword(email: string, password: string): Promise<User> {
-  const result = await signInWithEmailAndPassword(auth, email.trim(), password);
-  if (result.user) {
-    await syncUserProfile(result.user);
-  }
-  return result.user;
-}
-
-export async function sendAdminPasswordReset(email: string): Promise<void> {
-  await sendPasswordResetEmail(auth, email.trim());
-}
-
-export async function linkEmailPasswordToAccount(user: User, password: string): Promise<User> {
-  if (!user.email) {
-    throw new Error('This account does not have an email address associated with it.');
-  }
-  const credential = EmailAuthProvider.credential(user.email, password);
-  const userCred = await linkWithCredential(user, credential);
-  if (userCred.user) {
-    await syncUserProfile(userCred.user);
-  }
-  return userCred.user;
-}
-
-export function isPasswordProviderLinked(user: User | null): boolean {
-  if (!user) return false;
-  return user.providerData.some(p => p.providerId === 'password');
 }
 
 export async function loginWithGoogle(): Promise<User | null> {

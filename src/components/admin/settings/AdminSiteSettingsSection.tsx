@@ -15,9 +15,7 @@ import {
   ShieldCheck,
   Building,
   DollarSign,
-  Lock,
-  KeyRound,
-  Link2
+  Lock
 } from 'lucide-react';
 import { 
   fetchBusinessInfo, 
@@ -26,11 +24,6 @@ import {
   DEFAULT_REGULAR_HOURS 
 } from '../../../services/localSeoService';
 import { BusinessInfo, RegularHours, DayOfWeek } from '../../../types';
-import { 
-  linkEmailPasswordToAccount, 
-  isPasswordProviderLinked, 
-  sendAdminPasswordReset 
-} from '../../../firebase';
 
 interface AdminSiteSettingsSectionProps {
   currentUser: User | null;
@@ -63,12 +56,6 @@ export function AdminSiteSettingsSection({ currentUser, initialTab = 'contact' }
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [activeTab, setActiveTab] = useState<'contact' | 'address' | 'hours' | 'socials' | 'general' | 'auth'>(initialTab);
-  const [authPassword, setAuthPassword] = useState('');
-  const [authConfirmPassword, setAuthConfirmPassword] = useState('');
-  const [authLinkingLoading, setAuthLinkingLoading] = useState(false);
-  const [authFeedback, setAuthFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [resetEmailSending, setResetEmailSending] = useState(false);
-  const [resetEmailFeedback, setResetEmailFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -108,67 +95,6 @@ export function AdminSiteSettingsSection({ currentUser, initialTab = 'contact' }
       alert('Failed to save settings to Firestore. Please verify admin permissions.');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleLinkPasswordInSettings = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!currentUser) return;
-    if (authPassword.length < 6) {
-      setAuthFeedback({ type: 'error', message: 'Password must be at least 6 characters.' });
-      return;
-    }
-    if (authPassword !== authConfirmPassword) {
-      setAuthFeedback({ type: 'error', message: 'Passwords do not match.' });
-      return;
-    }
-    setAuthLinkingLoading(true);
-    setAuthFeedback(null);
-    try {
-      await linkEmailPasswordToAccount(currentUser, authPassword);
-      setAuthFeedback({
-        type: 'success',
-        message: 'Email & Password successfully linked to your account with UID preserved! Google sign-in is disabled.'
-      });
-      setAuthPassword('');
-      setAuthConfirmPassword('');
-    } catch (err: any) {
-      if (err?.code === 'auth/operation-not-allowed') {
-        setAuthFeedback({
-          type: 'error',
-          message: 'Email & Password authentication is disabled in Firebase Console (auth/operation-not-allowed). To enable it, navigate to Firebase Console > Authentication > Sign-in method and enable Email/Password.'
-        });
-      } else if (err?.code === 'auth/provider-already-linked') {
-        setAuthFeedback({ type: 'success', message: 'Account is already linked with Email & Password!' });
-      } else {
-        setAuthFeedback({ type: 'error', message: err?.message || 'Failed to link password.' });
-      }
-    } finally {
-      setAuthLinkingLoading(false);
-    }
-  };
-
-  const handleSendTestResetEmail = async () => {
-    if (!currentUser?.email) return;
-    setResetEmailSending(true);
-    setResetEmailFeedback(null);
-    try {
-      await sendAdminPasswordReset(currentUser.email);
-      setResetEmailFeedback({
-        type: 'success',
-        message: `Password reset email dispatched to ${currentUser.email}. Check your inbox.`
-      });
-    } catch (err: any) {
-      if (err?.code === 'auth/operation-not-allowed') {
-        setResetEmailFeedback({
-          type: 'error',
-          message: 'Email & Password provider is disabled in Firebase Console (auth/operation-not-allowed). Password reset is unavailable until Email/Password is enabled.'
-        });
-      } else {
-        setResetEmailFeedback({ type: 'error', message: err?.message || 'Failed to dispatch reset email.' });
-      }
-    } finally {
-      setResetEmailSending(false);
     }
   };
 
@@ -852,97 +778,8 @@ export function AdminSiteSettingsSection({ currentUser, initialTab = 'contact' }
                 ))}
               </div>
               <p className="text-xs text-slate-500">
-                The Euro Spa Center /admin login portal supports both <strong>Google Sign-In</strong> (instant access) and <strong>Email & Password</strong> credentials (when enabled in Firebase Console). Both methods preserve your exact UID and authorized security permissions.
+                The Euro Spa Center /admin management portal uses <strong>Google Sign-In</strong> for secure administrator access. Administrative authorization is strictly governed by the <code>/admins</code> collection in Firestore.
               </p>
-            </div>
-
-            {/* If password provider is not yet linked, allow linking right here */}
-            {currentUser && !isPasswordProviderLinked(currentUser) && (
-              <div className="p-5 rounded-2xl border border-amber-200 bg-amber-50/60 space-y-4">
-                <div className="flex items-start gap-3">
-                  <KeyRound className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-amber-900">Set Administrator Password (Link Credential)</h4>
-                    <p className="text-xs text-amber-700 mt-0.5">
-                      Your account currently authenticates via Google. Set a password below to link an EmailAuthProvider credential to this exact user UID.
-                    </p>
-                  </div>
-                </div>
-
-                {authFeedback && (
-                  <div className={`p-3 rounded-xl text-xs font-medium ${
-                    authFeedback.type === 'success'
-                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                      : 'bg-red-100 text-red-800 border border-red-300'
-                  }`}>
-                    {authFeedback.message}
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">New Password</label>
-                    <input
-                      type="password"
-                      value={authPassword}
-                      onChange={(e) => setAuthPassword(e.target.value)}
-                      placeholder="At least 6 characters"
-                      className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Confirm Password</label>
-                    <input
-                      type="password"
-                      value={authConfirmPassword}
-                      onChange={(e) => setAuthConfirmPassword(e.target.value)}
-                      placeholder="Re-enter password"
-                      className="w-full text-xs px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleLinkPasswordInSettings}
-                  disabled={authLinkingLoading || !authPassword}
-                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl shadow-xs transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <Link2 className="w-4 h-4" />
-                  <span>{authLinkingLoading ? 'Linking Password...' : 'Link Password to Account'}</span>
-                </button>
-              </div>
-            )}
-
-            {/* Password Reset Test / Trigger Section */}
-            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-slate-800">Password Reset Verification</h4>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Send a password reset link to your administrator email ({currentUser?.email}) to test or update your credentials.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleSendTestResetEmail}
-                  disabled={resetEmailSending || !currentUser?.email}
-                  className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                >
-                  <KeyRound className="w-3.5 h-3.5 text-blue-400" />
-                  <span>{resetEmailSending ? 'Sending...' : 'Send Password Reset Email'}</span>
-                </button>
-              </div>
-
-              {resetEmailFeedback && (
-                <div className={`p-3 rounded-xl text-xs font-medium ${
-                  resetEmailFeedback.type === 'success'
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                    : 'bg-red-100 text-red-800 border border-red-300'
-                }`}>
-                  {resetEmailFeedback.message}
-                </div>
-              )}
             </div>
           </div>
         )}
