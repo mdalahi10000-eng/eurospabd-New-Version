@@ -24,8 +24,8 @@ export function BlogListPage({ onBookNowClick, onWhatsAppClick }: BlogListPagePr
 
     // Dynamic SEO title & description
     updatePageSeo({
-      title: `Wellness Blog & Spa Articles | ${SPA_INFO.name} Banani`,
-      description: `Explore expert spa therapies, Swedish massage benefits, aromatherapy guidance, and self-care tips from ${SPA_INFO.name} in Banani, Dhaka.`,
+     title: `Wellness Blog & Spa Articles | Euro Spa Center | Banani, Dhaka`,
+      description: `Explore spa therapy guides, Swedish massage benefits, aromatherapy tips, and wellness advice from Euro Spa Center in Banani, Dhaka.`,
       canonicalUrl: buildCanonicalUrl('/blog'),
       ogImage: SEO_CONFIG.defaultOgImage,
       ogType: 'website'
