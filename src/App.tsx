@@ -122,47 +122,85 @@ export default function App() {
     };
   }, []);
 
-  // Fetch live canonical business info and active service areas from Firestore
-  useEffect(() => {
-    fetchPublicServiceAreas().then(areas => {
+ // Fetch live canonical business info and active service areas from Firestore
+useEffect(() => {
+  fetchPublicServiceAreas()
+    .then(areas => {
       setServiceAreas(areas);
-    }).catch(err => console.warn('Could not load service areas:', err));
+    })
+    .catch(err => console.warn('Could not load service areas:', err));
+}, []);
 
-    const unsubBiz = subscribeToBusinessInfo((info) => {
-      setBusinessInfo(info);
-      injectLocalBusinessSchema(info, serviceAreas);
+useEffect(() => {
+  const unsubBiz = subscribeToBusinessInfo((info) => {
+    setBusinessInfo(info);
+  });
+
+  return () => {
+    unsubBiz();
+  };
+}, []);
+
+useEffect(() => {
+  if (businessInfo) {
+    injectLocalBusinessSchema(businessInfo, serviceAreas);
+  }
+}, [businessInfo, serviceAreas]);
+
+  // Centralized SEO restoration for all public routes
+useEffect(() => {
+  if (match.route === 'home') {
+    updatePageSeo({
+      title: SEO_CONFIG.defaultTitle,
+      description: SEO_CONFIG.defaultMetaDescription,
+      canonicalUrl: buildCanonicalUrl('/'),
+      ogImage: SEO_CONFIG.defaultOgImage,
+      ogType: 'website'
     });
+  } else if (match.route === 'service-detail' && match.params.slug) {
+    const slug = match.params.slug;
+    const matchedSvc = services.find(s => s.slug === slug || s.id === slug);
 
-    return () => {
-      unsubBiz();
-    };
-  }, []);
+    if (matchedSvc) {
+      setSelectedService(matchedSvc);
 
-  // 1. Centralized SEO restoration: When route is home or service-detail
-  useEffect(() => {
-    if (match.route === 'home') {
       updatePageSeo({
-        title: SEO_CONFIG.defaultTitle,
-        description: SEO_CONFIG.defaultMetaDescription,
-        canonicalUrl: buildCanonicalUrl('/'),
+        title:
+          matchedSvc.seoTitle ||
+          `${matchedSvc.name} in Banani, Dhaka | ${SEO_CONFIG.siteName}`,
+        description:
+          matchedSvc.metaDescription || matchedSvc.shortDescription,
+        canonicalUrl: buildCanonicalUrl(`/services/${slug}`),
+        ogImage:
+          matchedSvc.ogImage ||
+          matchedSvc.image ||
+          SEO_CONFIG.defaultOgImage,
+        ogType: 'product'
+      });
+    }
+  } else if (match.route === 'location-detail' && match.params.slug) {
+    const slug = match.params.slug;
+    const matchedArea = serviceAreas.find(area => area.slug === slug);
+
+    if (matchedArea) {
+      updatePageSeo({
+        title:
+          matchedArea.seoTitle ||
+          `${matchedArea.name} Spa & Massage | ${SEO_CONFIG.siteName}`,
+        description:
+          matchedArea.metaDescription || matchedArea.shortDescription,
+        canonicalUrl: buildCanonicalUrl(`/locations/${slug}`),
         ogImage: SEO_CONFIG.defaultOgImage,
         ogType: 'website'
       });
-    } else if (match.route === 'service-detail' && match.params.slug) {
-      const slug = match.params.slug;
-      const matchedSvc = services.find(s => s.slug === slug || s.id === slug);
-      if (matchedSvc) {
-        setSelectedService(matchedSvc);
-        updatePageSeo({
-          title: matchedSvc.seoTitle || `${matchedSvc.name} in Banani, Dhaka | ${SEO_CONFIG.siteName}`,
-          description: matchedSvc.metaDescription || matchedSvc.shortDescription,
-          canonicalUrl: matchedSvc.canonicalUrl || buildCanonicalUrl(`/services/${slug}`),
-          ogImage: matchedSvc.ogImage || matchedSvc.image || SEO_CONFIG.defaultOgImage,
-          ogType: 'product'
-        });
-      }
     }
-  }, [match.route, match.params.slug, services]);
+  }
+}, [
+  match.route,
+  match.params.slug,
+  services,
+  serviceAreas
+]);
 
   // Modals state
   const [selectedService, setSelectedService] = useState<Service | null>(null);
