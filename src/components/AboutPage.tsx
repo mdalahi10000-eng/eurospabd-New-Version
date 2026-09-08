@@ -92,10 +92,10 @@ export function AboutPage({
 
   // SEO updates whenever content or businessInfo changes
   useEffect(() => {
-    const pageTitle = `${content.heading || 'About Us'} | Premier Spa & Wellness Sanctuary Banani, Dhaka`;
+   const pageTitle = `About Us | Euro Spa Center | Spa & Wellness in Banani, Dhaka`;
     const pageDescription = content.description 
       ? (content.description.length > 155 ? `${content.description.slice(0, 152)}...` : content.description)
-      : `Discover ${name} in Banani, Dhaka. Luxury massage therapies, Swedish massage, certified therapists, private VIP suites, and serene wellness sanctuary.`;
+      : `Learn about Euro Spa Center, a professional spa and wellness center at 73 Road No. 6, Banani, Dhaka, offering massage and wellness treatments.`;
     const canonical = buildCanonicalUrl('/about');
     const ogImg = content.featuredImage || SEO_CONFIG.defaultOgImage;
 
