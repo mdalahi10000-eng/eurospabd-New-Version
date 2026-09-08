@@ -8,7 +8,7 @@ export const SEO_CONFIG = {
   defaultTitle: 'Euro Spa Center | Spa & Massage Center in Banani, Dhaka',
   defaultMetaDescription: 'Euro Spa Center is a spa and wellness center in Banani, Dhaka, offering Swedish, deep tissue, aromatherapy, hot stone massage, body scrub and wellness treatments.',
   canonicalBaseUrl: 'https://eurospabd.com',
-  defaultOgImage: 'https://eurospabd.com/euro_spa_logo_clean.png',
+  defaultOgImage: 'https://eurospabd.com/photos/logo.jpg',
   defaultKeywords: [
     'spa banani',
     'massage center banani',
