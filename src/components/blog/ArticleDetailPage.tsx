@@ -45,8 +45,8 @@ export function ArticleDetailPage({ slug, onBookNowClick, onWhatsAppClick }: Art
 
           // Centralized SEO update
           updatePageSeo({
-            title: art.seoTitle || `${art.title} | ${SEO_CONFIG.siteName} Banani`,
-            description: art.metaDescription || art.excerpt,
+            title: art.seoTitle || `${art.title} | Euro Spa Center | Banani, Dhaka`,
+            description: art.metaDescription || art.excerpt || `${art.title} - wellness and spa guidance from Euro Spa Center in Banani, Dhaka.`,
             canonicalUrl: canonicalUrl,
             ogImage: ogImageUrl,
             ogType: 'article'
