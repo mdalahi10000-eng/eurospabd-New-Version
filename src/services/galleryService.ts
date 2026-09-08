@@ -9,7 +9,8 @@ import {
   query, 
   where, 
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  onSnapshot
 } from 'firebase/firestore';
 import { 
   ref, 
@@ -20,6 +21,7 @@ import {
 import { db, storage, auth, checkIsAdmin } from '../firebase';
 import { PhotoItem, GalleryImage } from '../types';
 import { PHOTOS_DATA, SPA_INFO } from '../data/spaData';
+import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
 export const STANDARD_GALLERY_CATEGORIES = [
   'Spa Interior',
@@ -203,6 +205,44 @@ export async function seedInitialGalleryIfEmpty(): Promise<GalleryImage[]> {
 }
 
 /**
+ * Returns the latest synchronously available active gallery images (from cache if available)
+ */
+export function getInitialGallery(): GalleryImage[] {
+  const cached = getCachedData<GalleryImage[]>(CACHE_KEYS.GALLERY);
+  if (cached && Array.isArray(cached) && cached.length > 0) {
+    return cached;
+  }
+  return PHOTOS_DATA.map((p, idx) => mapStaticPhotoToGalleryImage(p, idx));
+}
+
+/**
+ * Real-time listener for public active gallery images with automatic cache synchronization
+ */
+export function subscribeToPublicGallery(callback: (images: GalleryImage[]) => void): () => void {
+  try {
+    const q = query(collection(db, 'gallery'), where('status', '==', 'active'));
+    return onSnapshot(q, (snap) => {
+      if (!snap.empty) {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as GalleryImage));
+        const sorted = list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+        setCachedData(CACHE_KEYS.GALLERY, sorted);
+        callback(sorted);
+      } else {
+        const initial = getInitialGallery();
+        callback(initial);
+      }
+    }, (err) => {
+      console.warn('subscribeToPublicGallery onSnapshot notice:', err);
+      const fallback = getInitialGallery();
+      callback(fallback);
+    });
+  } catch (err) {
+    console.warn('Error subscribing to public gallery:', err);
+    return () => {};
+  }
+}
+
+/**
  * Fetch active gallery images for public website
  * Inactive images are strictly filtered out
  */
@@ -213,15 +253,15 @@ export async function fetchPublicGallery(): Promise<GalleryImage[]> {
 
     if (!snap.empty) {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as GalleryImage));
-      return list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+      const sorted = list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+      setCachedData(CACHE_KEYS.GALLERY, sorted);
+      return sorted;
     }
 
-    // If Firestore empty, public users simply use the existing static fallback.
-    // Do not trigger automatic seeding on unauthenticated public requests.
-    return PHOTOS_DATA.map((p, idx) => mapStaticPhotoToGalleryImage(p, idx));
+    return getInitialGallery();
   } catch (err) {
     console.warn('Public gallery fetch notice:', err);
-    return PHOTOS_DATA.map((p, idx) => mapStaticPhotoToGalleryImage(p, idx));
+    return getInitialGallery();
   }
 }
 
@@ -267,6 +307,8 @@ export async function createGalleryImage(
   };
 
   await setDoc(docRef, payload);
+  const current = getInitialGallery();
+  setCachedData(CACHE_KEYS.GALLERY, [payload, ...current]);
   return docId;
 }
 
@@ -275,10 +317,14 @@ export async function createGalleryImage(
  */
 export async function updateGalleryImage(id: string, updates: Partial<GalleryImage>): Promise<void> {
   const docRef = doc(db, 'gallery', id);
+  const nowStr = new Date().toISOString();
   await updateDoc(docRef, {
     ...updates,
-    updatedAt: new Date().toISOString()
+    updatedAt: nowStr
   });
+  const current = getInitialGallery();
+  const updatedList = current.map(img => img.id === id ? { ...img, ...updates, updatedAt: nowStr } : img);
+  setCachedData(CACHE_KEYS.GALLERY, updatedList);
 }
 
 /**
@@ -297,6 +343,10 @@ export async function deleteGalleryImage(id: string, storagePath?: string): Prom
   // 1. Delete Firestore document
   const docRef = doc(db, 'gallery', id);
   await deleteDoc(docRef);
+
+  // Proactively update cached gallery
+  const current = getInitialGallery();
+  setCachedData(CACHE_KEYS.GALLERY, current.filter(img => img.id !== id));
 
   // 2. Delete Storage file if uploaded
   if (storagePath) {

@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { FAQItem } from '../types';
+import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
 export const INITIAL_FAQS: Omit<FAQItem, 'createdAt' | 'updatedAt'>[] = [
   {
@@ -76,6 +77,17 @@ export const INITIAL_FAQS: Omit<FAQItem, 'createdAt' | 'updatedAt'>[] = [
 
 const FAQS_COLLECTION = 'faqs';
 
+/**
+ * Returns the latest synchronously available active FAQs (from cache if available)
+ */
+export function getInitialFAQs(): FAQItem[] {
+  const cached = getCachedData<FAQItem[]>(CACHE_KEYS.FAQS);
+  if (cached && Array.isArray(cached) && cached.length > 0) {
+    return cached;
+  }
+  return INITIAL_FAQS as FAQItem[];
+}
+
 export async function fetchAllFAQs(): Promise<FAQItem[]> {
   try {
     const q = query(collection(db, FAQS_COLLECTION), orderBy('displayOrder', 'asc'));
@@ -110,10 +122,14 @@ export async function fetchAllFAQs(): Promise<FAQItem[]> {
 export async function fetchPublicFAQs(): Promise<FAQItem[]> {
   try {
     const all = await fetchAllFAQs();
-    return all.filter(f => f.status === 'active');
+    const active = all.filter(f => f.status === 'active');
+    if (active.length > 0) {
+      setCachedData(CACHE_KEYS.FAQS, active);
+    }
+    return active;
   } catch (err) {
     console.warn('Error fetching public FAQs:', err);
-    return (INITIAL_FAQS as FAQItem[]).filter(f => f.status === 'active');
+    return getInitialFAQs();
   }
 }
 
@@ -123,7 +139,8 @@ export function subscribeToActiveFAQs(callback: (items: FAQItem[]) => void): () 
     q,
     (snapshot) => {
       if (snapshot.empty) {
-        callback(INITIAL_FAQS as FAQItem[]);
+        const initial = getInitialFAQs();
+        callback(initial);
         return;
       }
       const list: FAQItem[] = [];
@@ -142,11 +159,13 @@ export function subscribeToActiveFAQs(callback: (items: FAQItem[]) => void): () 
           });
         }
       });
-      callback(list.sort((a, b) => a.displayOrder - b.displayOrder));
+      const sorted = list.sort((a, b) => a.displayOrder - b.displayOrder);
+      setCachedData(CACHE_KEYS.FAQS, sorted);
+      callback(sorted);
     },
     (error) => {
       console.warn('Firestore onSnapshot error in subscribeToActiveFAQs:', error);
-      callback(INITIAL_FAQS as FAQItem[]);
+      callback(getInitialFAQs());
     }
   );
 }
@@ -186,12 +205,19 @@ export function subscribeToAllFAQs(callback: (items: FAQItem[]) => void): () => 
 export async function createFAQ(faq: Omit<FAQItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   const id = `faq-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
   const ref = doc(db, FAQS_COLLECTION, id);
-  await setDoc(ref, {
+  const newFaq: FAQItem = {
     ...faq,
     id,
+    displayOrder: faq.displayOrder ?? 99,
+    status: faq.status || 'active'
+  };
+  await setDoc(ref, {
+    ...newFaq,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+  const current = getInitialFAQs();
+  setCachedData(CACHE_KEYS.FAQS, [...current, newFaq]);
   return id;
 }
 
@@ -201,11 +227,16 @@ export async function updateFAQ(id: string, updates: Partial<Omit<FAQItem, 'id' 
     ...updates,
     updatedAt: serverTimestamp()
   });
+  const current = getInitialFAQs();
+  const updatedList = current.map(f => f.id === id ? { ...f, ...updates } : f);
+  setCachedData(CACHE_KEYS.FAQS, updatedList);
 }
 
 export async function deleteFAQ(id: string): Promise<void> {
   const ref = doc(db, FAQS_COLLECTION, id);
   await deleteDoc(ref);
+  const current = getInitialFAQs();
+  setCachedData(CACHE_KEYS.FAQS, current.filter(f => f.id !== id));
 }
 
 export async function toggleFAQStatus(id: string, currentStatus: 'active' | 'inactive'): Promise<void> {

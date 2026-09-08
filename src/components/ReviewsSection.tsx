@@ -35,7 +35,10 @@ export function ReviewsSection({
   const allFirebaseIds = new Set(firebaseReviews.map(r => r.id));
   const remainingBase = baseReviews.filter(b => !allFirebaseIds.has(b.id));
 
-  const liveReviews = [...approvedFirebase, ...remainingBase];
+  // If Firebase reviews are loaded/cached, use them as the primary source of truth
+  const liveReviews = firebaseReviews.length > 0 
+    ? approvedFirebase 
+    : baseReviews;
   const topReviews = liveReviews.slice(0, 3);
 
   return (

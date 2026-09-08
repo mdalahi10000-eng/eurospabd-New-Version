@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SPA_INFO } from '../data/spaData';
+import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
 export interface HomepageContent {
   heroBannerImage: string;
@@ -73,7 +74,7 @@ export async function fetchHomepageContent(): Promise<HomepageContent> {
     const snap = await getDoc(HOMEPAGE_DOC_REF);
     if (snap.exists()) {
       const data = snap.data();
-      return {
+      const merged: HomepageContent = {
         ...DEFAULT_HOMEPAGE_CONTENT,
         ...data,
         ctaButtons: {
@@ -89,12 +90,40 @@ export async function fetchHomepageContent(): Promise<HomepageContent> {
           ...(data.announcementBanner || {})
         }
       };
+      setCachedData(CACHE_KEYS.HOMEPAGE, merged);
+      return merged;
     }
-    return DEFAULT_HOMEPAGE_CONTENT;
+    return getCachedData<HomepageContent>(CACHE_KEYS.HOMEPAGE) || DEFAULT_HOMEPAGE_CONTENT;
   } catch (err) {
     console.warn('Error fetching homepage content:', err);
-    return DEFAULT_HOMEPAGE_CONTENT;
+    return getCachedData<HomepageContent>(CACHE_KEYS.HOMEPAGE) || DEFAULT_HOMEPAGE_CONTENT;
   }
+}
+
+/**
+ * Returns the latest synchronously available homepage content (from cache if available)
+ */
+export function getInitialHomepageContent(): HomepageContent {
+  const cached = getCachedData<HomepageContent>(CACHE_KEYS.HOMEPAGE);
+  if (cached) {
+    return {
+      ...DEFAULT_HOMEPAGE_CONTENT,
+      ...cached,
+      ctaButtons: {
+        ...DEFAULT_HOMEPAGE_CONTENT.ctaButtons,
+        ...(cached.ctaButtons || {})
+      },
+      floatingWhatsapp: {
+        ...DEFAULT_HOMEPAGE_CONTENT.floatingWhatsapp,
+        ...(cached.floatingWhatsapp || {})
+      },
+      announcementBanner: {
+        ...DEFAULT_HOMEPAGE_CONTENT.announcementBanner,
+        ...(cached.announcementBanner || {})
+      }
+    };
+  }
+  return DEFAULT_HOMEPAGE_CONTENT;
 }
 
 export function subscribeToHomepageContent(callback: (content: HomepageContent) => void): () => void {
@@ -102,7 +131,7 @@ export function subscribeToHomepageContent(callback: (content: HomepageContent) 
     return onSnapshot(HOMEPAGE_DOC_REF, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        callback({
+        const merged: HomepageContent = {
           ...DEFAULT_HOMEPAGE_CONTENT,
           ...data,
           ctaButtons: {
@@ -117,13 +146,17 @@ export function subscribeToHomepageContent(callback: (content: HomepageContent) 
             ...DEFAULT_HOMEPAGE_CONTENT.announcementBanner,
             ...(data.announcementBanner || {})
           }
-        });
+        };
+        setCachedData(CACHE_KEYS.HOMEPAGE, merged);
+        callback(merged);
       } else {
-        callback(DEFAULT_HOMEPAGE_CONTENT);
+        const initial = getInitialHomepageContent();
+        callback(initial);
       }
     }, (err) => {
       console.warn('Homepage snapshot error:', err);
-      callback(DEFAULT_HOMEPAGE_CONTENT);
+      const fallback = getInitialHomepageContent();
+      callback(fallback);
     });
   } catch (err) {
     console.warn('Error subscribing to homepage content:', err);
@@ -132,8 +165,15 @@ export function subscribeToHomepageContent(callback: (content: HomepageContent) 
 }
 
 export async function updateHomepageContent(content: HomepageContent, updatedBy?: string): Promise<void> {
+  const merged: HomepageContent = {
+    ...DEFAULT_HOMEPAGE_CONTENT,
+    ...content
+  };
+  // Update local cache immediately
+  setCachedData(CACHE_KEYS.HOMEPAGE, merged);
+
   await setDoc(HOMEPAGE_DOC_REF, {
-    ...content,
+    ...merged,
     updatedAt: serverTimestamp(),
     updatedBy: updatedBy || 'admin'
   }, { merge: true });

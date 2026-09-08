@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ChevronDown, HelpCircle, MessageSquare, Phone } from 'lucide-react';
-import { subscribeToActiveFAQs, INITIAL_FAQS } from '../services/faqService';
+import { subscribeToActiveFAQs, INITIAL_FAQS, getInitialFAQs } from '../services/faqService';
+import { hasCachedData, CACHE_KEYS } from '../services/cacheService';
 import { FAQItem } from '../types';
 
 interface FaqSectionProps {
@@ -9,9 +10,12 @@ interface FaqSectionProps {
 }
 
 export function FaqSection({ onWhatsAppClick, onCallClick }: FaqSectionProps) {
-  const [faqs, setFaqs] = useState<FAQItem[]>([]);
-  const [openId, setOpenId] = useState<string | null>('faq-1');
-  const [loading, setLoading] = useState<boolean>(true);
+  const [faqs, setFaqs] = useState<FAQItem[]>(() => getInitialFAQs());
+  const [openId, setOpenId] = useState<string | null>(() => {
+    const init = getInitialFAQs();
+    return init[0]?.id || 'faq-1';
+  });
+  const [loading, setLoading] = useState<boolean>(() => !hasCachedData(CACHE_KEYS.FAQS));
 
   useEffect(() => {
     const unsubscribe = subscribeToActiveFAQs((items) => {

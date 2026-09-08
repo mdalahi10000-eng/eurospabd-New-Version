@@ -7,7 +7,9 @@ import {
   Sparkles,
   Lock,
   CheckCircle2,
-  Users
+  Users,
+  Info,
+  RotateCw
 } from 'lucide-react';
 import { 
   loginWithGoogle, 
@@ -20,9 +22,11 @@ import euroSpaLogo from '../../assets/Untitled design (4).jpg';
 
 interface AdminLoginPageProps {
   onSuccess?: () => void;
+  startupNotice?: string | null;
+  onRetryConnection?: () => void;
 }
 
-export function AdminLoginPage({ onSuccess }: AdminLoginPageProps) {
+export function AdminLoginPage({ onSuccess, startupNotice, onRetryConnection }: AdminLoginPageProps) {
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -138,6 +142,27 @@ export function AdminLoginPage({ onSuccess }: AdminLoginPageProps) {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Startup recovery notice if redirected due to timeout/idle period */}
+            {startupNotice && !errorMessage && (
+              <div className="p-3.5 rounded-2xl bg-blue-950/40 border border-blue-800/60 text-blue-200 text-xs flex items-start gap-2.5 shadow-sm">
+                <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+                <div className="flex-1 leading-relaxed">
+                  <span>{startupNotice}</span>
+                  {onRetryConnection && (
+                    <button
+                      id="btn-admin-retry-login-screen"
+                      type="button"
+                      onClick={onRetryConnection}
+                      className="ml-2 inline-flex items-center gap-1 underline font-semibold text-blue-300 hover:text-blue-100 cursor-pointer"
+                    >
+                      <RotateCw className="w-3 h-3 inline" />
+                      <span>Retry connection</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Primary Google Login Button */}
             <div className="space-y-4 pt-1">

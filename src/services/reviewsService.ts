@@ -13,6 +13,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { INITIAL_REVIEWS } from '../data/spaData';
+import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
 export type ReviewStatus = 'approved' | 'hidden';
 
@@ -129,6 +130,17 @@ export async function fetchAdminReviews(): Promise<AdminReview[]> {
   }
 }
 
+/**
+ * Returns the latest synchronously available reviews (from cache if available)
+ */
+export function getInitialAdminReviews(): AdminReview[] {
+  const cached = getCachedData<AdminReview[]>(CACHE_KEYS.REVIEWS);
+  if (cached && Array.isArray(cached) && cached.length > 0) {
+    return cached;
+  }
+  return [];
+}
+
 export function subscribeToAdminReviews(
   callback: (reviews: AdminReview[]) => void
 ): () => void {
@@ -138,6 +150,7 @@ export function subscribeToAdminReviews(
         // Auto-seed if empty
         const seeded = await seedInitialReviewsIfEmpty();
         if (seeded.length > 0) {
+          setCachedData(CACHE_KEYS.REVIEWS, seeded);
           callback(seeded);
           return;
         }
@@ -149,6 +162,7 @@ export function subscribeToAdminReviews(
         if (timeA !== timeB) return timeB - timeA;
         return a.userName.localeCompare(b.userName);
       });
+      setCachedData(CACHE_KEYS.REVIEWS, list);
       callback(list);
     }, (err) => {
       console.warn('Reviews snapshot error:', err);
@@ -166,6 +180,9 @@ export async function updateReviewStatus(id: string, status: ReviewStatus): Prom
     status,
     updatedAt: serverTimestamp()
   });
+  const current = getInitialAdminReviews();
+  const updated = current.map(r => r.id === id ? { ...r, status } : r);
+  setCachedData(CACHE_KEYS.REVIEWS, updated);
 }
 
 export async function updateReview(id: string, updates: Partial<AdminReview>): Promise<void> {
@@ -176,6 +193,9 @@ export async function updateReview(id: string, updates: Partial<AdminReview>): P
   };
   delete payload.id;
   await updateDoc(reviewDoc, payload);
+  const current = getInitialAdminReviews();
+  const updated = current.map(r => r.id === id ? { ...r, ...updates } : r);
+  setCachedData(CACHE_KEYS.REVIEWS, updated);
 }
 
 export async function createAdminReview(data: Omit<AdminReview, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
@@ -192,6 +212,8 @@ export async function createAdminReview(data: Omit<AdminReview, 'id' | 'createdA
     updatedAt: serverTimestamp()
   };
   const docRef = await addDoc(REVIEWS_COLLECTION, payload);
+  const current = getInitialAdminReviews();
+  setCachedData(CACHE_KEYS.REVIEWS, [{ ...payload, id: docRef.id }, ...current]);
   return docRef.id;
 }
 
@@ -202,9 +224,15 @@ export async function saveAdminResponse(id: string, adminResponse: string): Prom
     adminRespondedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+  const current = getInitialAdminReviews();
+  const updated = current.map(r => r.id === id ? { ...r, adminResponse: adminResponse.trim() } : r);
+  setCachedData(CACHE_KEYS.REVIEWS, updated);
 }
 
 export async function deleteReview(id: string): Promise<void> {
   const reviewDoc = doc(db, 'reviews', id);
   await deleteDoc(reviewDoc);
+  const current = getInitialAdminReviews();
+  const updated = current.filter(r => r.id !== id);
+  setCachedData(CACHE_KEYS.REVIEWS, updated);
 }

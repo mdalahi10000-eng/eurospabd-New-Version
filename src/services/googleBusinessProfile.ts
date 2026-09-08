@@ -14,6 +14,7 @@ import {
 import { auth, db } from '../firebase';
 import { SPA_INFO, INITIAL_REVIEWS, PHOTOS_DATA, USER_PROVIDED_PHOTOS } from '../data/spaData';
 import { ReviewItem, PhotoItem } from '../types';
+import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
 export interface SyncedGoogleData {
   businessName: string;
@@ -418,6 +419,20 @@ export function sanitizePhotos(photos?: PhotoItem[]): PhotoItem[] {
 }
 
 /**
+ * Returns the latest synchronously available Google sync data (from cache if available)
+ */
+export function getInitialGoogleBusinessSync(): SyncedGoogleData | null {
+  const cached = getCachedData<SyncedGoogleData>(CACHE_KEYS.GOOGLE_SYNC);
+  if (cached) {
+    return {
+      ...cached,
+      photos: sanitizePhotos(cached.photos)
+    };
+  }
+  return null;
+}
+
+/**
  * Subscribe to real-time Google Business Profile updates in Firestore
  */
 export function subscribeToGoogleBusinessSync(callback: (data: SyncedGoogleData | null) => void) {
@@ -426,17 +441,23 @@ export function subscribeToGoogleBusinessSync(callback: (data: SyncedGoogleData 
       if (snapshot.exists()) {
         const data = snapshot.data() as SyncedGoogleData;
         data.photos = sanitizePhotos(data.photos);
+        setCachedData(CACHE_KEYS.GOOGLE_SYNC, data);
         callback(data);
       } else {
         // Initialize if not present yet
         initializeDefaultGoogleSync().then((initData) => {
-          if (initData) initData.photos = sanitizePhotos(initData.photos);
+          if (initData) {
+            initData.photos = sanitizePhotos(initData.photos);
+            setCachedData(CACHE_KEYS.GOOGLE_SYNC, initData);
+          }
           callback(initData);
-        }).catch(() => callback(null));
+        }).catch(() => {
+          callback(getInitialGoogleBusinessSync());
+        });
       }
     }, (err) => {
       console.warn('Google Business sync listener error:', err);
-      callback(null);
+      callback(getInitialGoogleBusinessSync());
     });
   } catch (e) {
     console.warn('Subscription error:', e);

@@ -16,6 +16,7 @@ import {
 import { db } from '../firebase';
 import { BusinessInfo, ServiceArea, RegularHours, DayOfWeek } from '../types';
 import { SPA_INFO } from '../data/spaData';
+import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
 const SETTINGS_DOC_REF = doc(db, 'siteSettings', 'business');
 const SERVICE_AREAS_COLLECTION = collection(db, 'serviceAreas');
@@ -181,7 +182,7 @@ export async function fetchBusinessInfo(): Promise<BusinessInfo> {
     const snap = await getDoc(SETTINGS_DOC_REF);
     if (snap.exists()) {
       const data = snap.data();
-      return {
+      const merged: BusinessInfo = {
         ...DEFAULT_BUSINESS_INFO,
         ...data,
         regularHours: {
@@ -194,11 +195,50 @@ export async function fetchBusinessInfo(): Promise<BusinessInfo> {
         },
         specialHours: Array.isArray(data.specialHours) ? data.specialHours : []
       };
+      setCachedData(CACHE_KEYS.BUSINESS, merged);
+      return merged;
     }
   } catch (error) {
     console.warn('Could not fetch business info from Firestore, using default:', error);
   }
+  return getInitialBusinessInfo();
+}
+
+/**
+ * Returns the latest synchronously available business info (from cache if available)
+ */
+export function getInitialBusinessInfo(): BusinessInfo {
+  const cached = getCachedData<BusinessInfo>(CACHE_KEYS.BUSINESS);
+  if (cached) {
+    return {
+      ...DEFAULT_BUSINESS_INFO,
+      ...cached,
+      regularHours: {
+        ...DEFAULT_REGULAR_HOURS,
+        ...(cached.regularHours || {})
+      },
+      socialProfiles: {
+        ...DEFAULT_BUSINESS_INFO.socialProfiles,
+        ...(cached.socialProfiles || {})
+      },
+      specialHours: Array.isArray(cached.specialHours) ? cached.specialHours : []
+    };
+  }
   return DEFAULT_BUSINESS_INFO;
+}
+
+/**
+ * Returns the latest synchronously available service areas (from cache if available)
+ */
+export function getInitialServiceAreas(): ServiceArea[] {
+  const cached = getCachedData<ServiceArea[]>(CACHE_KEYS.SERVICE_AREAS);
+  if (cached && cached.length > 0) {
+    return cached;
+  }
+  return DEFAULT_SERVICE_AREAS.map((a, idx) => ({
+    ...a,
+    id: `default-${idx + 1}`
+  }));
 }
 
 /**
@@ -210,7 +250,7 @@ export function subscribeToBusinessInfo(callback: (info: BusinessInfo) => void):
     (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        callback({
+        const merged: BusinessInfo = {
           ...DEFAULT_BUSINESS_INFO,
           ...data,
           regularHours: {
@@ -222,14 +262,18 @@ export function subscribeToBusinessInfo(callback: (info: BusinessInfo) => void):
             ...(data.socialProfiles || {})
           },
           specialHours: Array.isArray(data.specialHours) ? data.specialHours : []
-        });
+        };
+        setCachedData(CACHE_KEYS.BUSINESS, merged);
+        callback(merged);
       } else {
-        callback(DEFAULT_BUSINESS_INFO);
+        const initial = getInitialBusinessInfo();
+        callback(initial);
       }
     },
     (error) => {
       console.warn('Firestore subscribeToBusinessInfo onSnapshot error:', error);
-      callback(DEFAULT_BUSINESS_INFO);
+      const fallback = getInitialBusinessInfo();
+      callback(fallback);
     }
   );
 }
@@ -241,13 +285,16 @@ export async function updateBusinessInfo(
   updates: Partial<BusinessInfo>, 
   adminEmail?: string
 ): Promise<BusinessInfo> {
-  const current = await fetchBusinessInfo();
+  const current = getInitialBusinessInfo();
   const merged: BusinessInfo = {
     ...current,
     ...updates,
     updatedAt: new Date().toISOString(),
     updatedBy: adminEmail || 'admin'
   };
+
+  // Update local cache immediately
+  setCachedData(CACHE_KEYS.BUSINESS, merged);
 
   await setDoc(SETTINGS_DOC_REF, {
     ...merged,
@@ -264,10 +311,12 @@ export async function fetchAllServiceAreas(): Promise<ServiceArea[]> {
   try {
     const snap = await getDocs(query(SERVICE_AREAS_COLLECTION, orderBy('displayOrder', 'asc')));
     if (!snap.empty) {
-      return snap.docs.map(doc => ({
+      const items = snap.docs.map(doc => ({
         id: doc.id,
         ...(doc.data() as Omit<ServiceArea, 'id'>)
       }));
+      setCachedData(CACHE_KEYS.SERVICE_AREAS, items);
+      return items;
     }
   } catch (error) {
     console.warn('Could not fetch service areas from Firestore:', error);
@@ -285,7 +334,11 @@ export async function fetchAllServiceAreas(): Promise<ServiceArea[]> {
  */
 export async function fetchPublicServiceAreas(): Promise<ServiceArea[]> {
   const all = await fetchAllServiceAreas();
-  return all.filter(a => a.status === 'active');
+  const active = all.filter(a => a.status === 'active');
+  if (active.length > 0) {
+    setCachedData(CACHE_KEYS.SERVICE_AREAS, active);
+  }
+  return active;
 }
 
 /**
@@ -326,18 +379,23 @@ export async function saveServiceArea(area: Partial<ServiceArea> & { name: strin
       slug: cleanSlug,
       updatedAt: now
     });
+    const current = getInitialServiceAreas();
+    setCachedData(CACHE_KEYS.SERVICE_AREAS, current.map(a => a.id === area.id ? { ...a, ...data, slug: cleanSlug, updatedAt: now } : a));
     return area.id;
   } else {
     // New document
     const { id, ...data } = area;
-    const docRef = await addDoc(SERVICE_AREAS_COLLECTION, {
+    const newAreaPayload: any = {
       ...data,
       slug: cleanSlug,
       status: data.status || 'active',
       displayOrder: typeof data.displayOrder === 'number' ? data.displayOrder : 99,
       createdAt: serverTimestamp(),
       updatedAt: now
-    });
+    };
+    const docRef = await addDoc(SERVICE_AREAS_COLLECTION, newAreaPayload);
+    const current = getInitialServiceAreas();
+    setCachedData(CACHE_KEYS.SERVICE_AREAS, [...current, { ...newAreaPayload, id: docRef.id }]);
     return docRef.id;
   }
 }
@@ -351,6 +409,8 @@ export async function deleteServiceArea(areaId: string): Promise<void> {
   }
   const docRef = doc(SERVICE_AREAS_COLLECTION, areaId);
   await deleteDoc(docRef);
+  const current = getInitialServiceAreas();
+  setCachedData(CACHE_KEYS.SERVICE_AREAS, current.filter(a => a.id !== areaId));
 }
 
 /**

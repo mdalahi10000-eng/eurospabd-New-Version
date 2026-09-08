@@ -7,6 +7,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { SPA_INFO } from '../data/spaData';
+import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
 export interface AboutHighlight {
   id: string;
@@ -69,19 +70,37 @@ export async function fetchAboutContent(): Promise<AboutContent> {
     const snap = await getDoc(ABOUT_DOC_REF);
     if (snap.exists()) {
       const data = snap.data();
-      return {
+      const merged: AboutContent = {
         ...DEFAULT_ABOUT_CONTENT,
         ...data,
         highlights: Array.isArray(data.highlights) && data.highlights.length > 0 
           ? data.highlights 
           : DEFAULT_ABOUT_CONTENT.highlights
       };
+      setCachedData(CACHE_KEYS.ABOUT, merged);
+      return merged;
     }
-    return DEFAULT_ABOUT_CONTENT;
   } catch (err) {
     console.warn('Error fetching about content:', err);
-    return DEFAULT_ABOUT_CONTENT;
   }
+  return getInitialAboutContent();
+}
+
+/**
+ * Returns the latest synchronously available About Us content (from cache if available)
+ */
+export function getInitialAboutContent(): AboutContent {
+  const cached = getCachedData<AboutContent>(CACHE_KEYS.ABOUT);
+  if (cached) {
+    return {
+      ...DEFAULT_ABOUT_CONTENT,
+      ...cached,
+      highlights: Array.isArray(cached.highlights) && cached.highlights.length > 0
+        ? cached.highlights
+        : DEFAULT_ABOUT_CONTENT.highlights
+    };
+  }
+  return DEFAULT_ABOUT_CONTENT;
 }
 
 export function subscribeToAboutContent(callback: (content: AboutContent) => void): () => void {
@@ -89,19 +108,23 @@ export function subscribeToAboutContent(callback: (content: AboutContent) => voi
     return onSnapshot(ABOUT_DOC_REF, (snap) => {
       if (snap.exists()) {
         const data = snap.data();
-        callback({
+        const merged: AboutContent = {
           ...DEFAULT_ABOUT_CONTENT,
           ...data,
           highlights: Array.isArray(data.highlights) && data.highlights.length > 0 
             ? data.highlights 
             : DEFAULT_ABOUT_CONTENT.highlights
-        });
+        };
+        setCachedData(CACHE_KEYS.ABOUT, merged);
+        callback(merged);
       } else {
-        callback(DEFAULT_ABOUT_CONTENT);
+        const initial = getInitialAboutContent();
+        callback(initial);
       }
     }, (err) => {
       console.warn('About content snapshot error:', err);
-      callback(DEFAULT_ABOUT_CONTENT);
+      const fallback = getInitialAboutContent();
+      callback(fallback);
     });
   } catch (err) {
     console.warn('Error subscribing to about content:', err);
@@ -110,8 +133,16 @@ export function subscribeToAboutContent(callback: (content: AboutContent) => voi
 }
 
 export async function updateAboutContent(content: AboutContent, updatedBy?: string): Promise<void> {
+  const merged: AboutContent = {
+    ...DEFAULT_ABOUT_CONTENT,
+    ...content
+  };
+
+  // Update local cache immediately
+  setCachedData(CACHE_KEYS.ABOUT, merged);
+
   await setDoc(ABOUT_DOC_REF, {
-    ...content,
+    ...merged,
     updatedAt: serverTimestamp(),
     updatedBy: updatedBy || 'admin'
   }, { merge: true });

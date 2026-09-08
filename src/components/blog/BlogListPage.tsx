@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Search, Clock, Calendar, ArrowLeft, ArrowRight, Tag, BookOpen, Sparkles } from 'lucide-react';
 import { Article } from '../../types';
-import { fetchPublishedArticles } from '../../services/articlesService';
+import { fetchPublishedArticles, getInitialArticles, subscribeToPublishedArticles } from '../../services/articlesService';
+import { hasCachedData, CACHE_KEYS } from '../../services/cacheService';
 import { navigate } from '../../router';
 import { SPA_INFO } from '../../data/spaData';
 import { updatePageSeo, SEO_CONFIG, buildCanonicalUrl, setCanonicalUrl } from '../../config/seoConfig';
@@ -14,8 +15,8 @@ interface BlogListPageProps {
 }
 
 export function BlogListPage({ onBookNowClick, onWhatsAppClick }: BlogListPageProps) {
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [articles, setArticles] = useState<Article[]>(() => getInitialArticles());
+  const [loading, setLoading] = useState(() => !hasCachedData(CACHE_KEYS.ARTICLES));
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
@@ -31,12 +32,13 @@ export function BlogListPage({ onBookNowClick, onWhatsAppClick }: BlogListPagePr
       ogType: 'website'
     });
 
-    fetchPublishedArticles()
-      .then(res => setArticles(res))
-      .catch(err => console.error('Failed to load published articles:', err))
-      .finally(() => setLoading(false));
+    const unsubscribe = subscribeToPublishedArticles((res) => {
+      setArticles(res);
+      setLoading(false);
+    });
 
     return () => {
+      unsubscribe();
       setCanonicalUrl(buildCanonicalUrl('/'));
     };
   }, []);

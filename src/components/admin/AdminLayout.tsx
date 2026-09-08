@@ -16,9 +16,12 @@ import {
   Mail, 
   Settings,
   ShieldCheck,
-  LogOut
+  LogOut,
+  RotateCw,
+  LogIn,
+  AlertCircle
 } from 'lucide-react';
-import { auth, checkIsAdmin, logoutUser } from '../../firebase';
+import { auth, checkIsAdmin, logoutUser, recoverFirestoreNetwork, getInitialAuthState } from '../../firebase';
 import { AdminLoginPage } from './AdminLoginPage';
 import { AdminAccessDeniedPage } from './AdminAccessDeniedPage';
 import { AdminSidebar, AdminSection } from './AdminSidebar';
@@ -57,40 +60,119 @@ export function AdminLayout() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [authChecking, setAuthChecking] = useState<boolean>(true);
+  const [startupPhase, setStartupPhase] = useState<'checking' | 'slow' | 'timed_out'>('checking');
+  const [startupNotice, setStartupNotice] = useState<string | null>(null);
+  const [retryTrigger, setRetryTrigger] = useState<number>(0);
   const [currentSection, setCurrentSection] = useState<AdminSection>('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState<boolean>(false);
   const [pendingBookingsCount, setPendingBookingsCount] = useState<number>(0);
 
   useEffect(() => {
     document.title = `Admin Console | ${SPA_INFO.name}`;
+    let isCancelled = false;
+
+    // Soft warning timer at 3.5s - session restoration taking longer than usual
+    const slowTimer = setTimeout(() => {
+      if (!isCancelled) {
+        setStartupPhase('slow');
+      }
+    }, 3500);
+
+    // Hard timeout at 7.5s - guarantees the admin application can NEVER be stuck indefinitely!
+    const timeoutTimer = setTimeout(() => {
+      if (!isCancelled) {
+        console.warn('[AdminLayout] Auth verification exceeded 7.5s. Falling back to login screen.');
+        setStartupPhase('timed_out');
+        setStartupNotice('Session restoration took longer than expected after an idle period. You can sign in below or retry connection.');
+        recoverFirestoreNetwork().catch(() => {});
+        setAuthChecking(false);
+      }
+    }, 7500);
+
+    // Immediate fast-path check if currentUser is already in memory
+    if (auth.currentUser) {
+      checkIsAdmin(auth.currentUser).then((adminCheck) => {
+        if (!isCancelled) {
+          setCurrentUser(auth.currentUser);
+          setIsAdmin(adminCheck);
+          setAuthChecking(false);
+          clearTimeout(slowTimer);
+          clearTimeout(timeoutTimer);
+        }
+      }).catch(() => {
+        if (!isCancelled) {
+          setIsAdmin(false);
+          setAuthChecking(false);
+          clearTimeout(slowTimer);
+          clearTimeout(timeoutTimer);
+        }
+      });
+    }
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+      if (isCancelled) return;
       setCurrentUser(user);
       if (user) {
         try {
           const adminCheck = await checkIsAdmin(user);
-          setIsAdmin(adminCheck);
+          if (!isCancelled) {
+            setIsAdmin(adminCheck);
+            setAuthChecking(false);
+            clearTimeout(slowTimer);
+            clearTimeout(timeoutTimer);
+          }
         } catch (e) {
           console.error('Error verifying admin authorization:', e);
-          setIsAdmin(false);
+          if (!isCancelled) {
+            setIsAdmin(false);
+            setAuthChecking(false);
+            clearTimeout(slowTimer);
+            clearTimeout(timeoutTimer);
+          }
         }
       } else {
-        setIsAdmin(null);
+        if (!isCancelled) {
+          setIsAdmin(null);
+          setAuthChecking(false);
+          clearTimeout(slowTimer);
+          clearTimeout(timeoutTimer);
+        }
       }
-      setAuthChecking(false);
     });
 
-    // Real-time pending bookings badge counter
+    return () => {
+      isCancelled = true;
+      clearTimeout(slowTimer);
+      clearTimeout(timeoutTimer);
+      unsubscribeAuth();
+    };
+  }, [retryTrigger]);
+
+  // Real-time pending bookings badge counter - only active when user is verified admin
+  useEffect(() => {
+    if (!currentUser || isAdmin !== true) return;
     const unsubscribeAppts = subscribeToAdminAppointments((appts) => {
       const pending = appts.filter(a => a.status === 'pending').length;
       setPendingBookingsCount(pending);
     });
+    return () => unsubscribeAppts();
+  }, [currentUser, isAdmin]);
 
-    return () => {
-      unsubscribeAuth();
-      unsubscribeAppts();
-    };
-  }, []);
+  const handleRetryConnection = () => {
+    setAuthChecking(true);
+    setStartupPhase('checking');
+    setStartupNotice(null);
+    recoverFirestoreNetwork().then(() => {
+      setRetryTrigger(prev => prev + 1);
+    });
+  };
+
+  const handleBypassToLogin = () => {
+    setAuthChecking(false);
+    setCurrentUser(null);
+    setIsAdmin(null);
+    setStartupNotice('You continued directly to the administrator login screen.');
+  };
 
   const handleLogout = async () => {
     try {
@@ -103,19 +185,68 @@ export function AdminLayout() {
     }
   };
 
-  // 1. Loading Authentication State
+  // 1. Loading Authentication State with interactive timeout & recovery
   if (authChecking) {
     return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 gap-3">
-        <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin" />
-        <p className="text-xs font-medium tracking-wide">Verifying Administrator Credentials...</p>
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 p-4 font-sans">
+        <div className="max-w-md w-full text-center space-y-6 bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 shadow-2xl backdrop-blur-xs">
+          <div className="relative inline-flex items-center justify-center">
+            <div className="w-12 h-12 border-3 border-blue-500/20 border-t-blue-500 rounded-full animate-spin" />
+            <ShieldCheck className="w-5 h-5 text-blue-400 absolute" />
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-base font-semibold text-slate-100">
+              {startupPhase === 'slow' ? 'Resuming Administration Portal...' : 'Verifying Administrator Credentials...'}
+            </h2>
+            <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
+              {startupPhase === 'slow'
+                ? 'Session restoration is taking longer than usual (often occurs after an idle period). You can continue directly to sign in or retry.'
+                : 'Please wait while your administrative session is securely verified...'}
+            </p>
+          </div>
+
+          {startupPhase === 'slow' && (
+            <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center items-center">
+              <button
+                id="btn-admin-bypass-to-login"
+                type="button"
+                onClick={handleBypassToLogin}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-md shadow-blue-900/30 transition-all cursor-pointer"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>Continue to Login Screen</span>
+              </button>
+
+              <button
+                id="btn-admin-retry-startup"
+                type="button"
+                onClick={handleRetryConnection}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold border border-slate-700 transition-all cursor-pointer"
+              >
+                <RotateCw className="w-3.5 h-3.5" />
+                <span>Retry Connection</span>
+              </button>
+            </div>
+          )}
+
+          <div className="pt-2 text-[11px] text-slate-500 font-mono">
+            {SPA_INFO.name} &bull; Protected Access
+          </div>
+        </div>
       </div>
     );
   }
 
   // 2. Not Authenticated -> Show Admin Login
   if (!currentUser) {
-    return <AdminLoginPage onSuccess={() => setAuthChecking(false)} />;
+    return (
+      <AdminLoginPage 
+        onSuccess={() => setAuthChecking(false)} 
+        startupNotice={startupNotice}
+        onRetryConnection={handleRetryConnection}
+      />
+    );
   }
 
   // 3. Authenticated but Unauthorized -> Show Access Denied

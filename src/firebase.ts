@@ -9,6 +9,9 @@ import {
 } from 'firebase/auth';
 import { 
   getFirestore, 
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
   collection, 
   addDoc, 
   getDocs, 
@@ -19,10 +22,13 @@ import {
   where,
   doc,
   getDoc,
-  setDoc
+  setDoc,
+  disableNetwork,
+  enableNetwork
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseAppletConfig from '../firebase-applet-config.json';
+import { setCachedData, CACHE_KEYS } from './services/cacheService';
 
 const firebaseConfig = {
   apiKey: firebaseAppletConfig.apiKey,
@@ -35,11 +41,85 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-// Target dedicated provisioned Firestore Database
+// Target dedicated provisioned Firestore Database with offline persistent cache
 const databaseId = firebaseAppletConfig.firestoreDatabaseId || '(default)';
-export const db = databaseId === '(default)' ? getFirestore(app) : getFirestore(app, databaseId);
+
+let firestoreInstance: any;
+try {
+  firestoreInstance = initializeFirestore(
+    app,
+    {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    },
+    databaseId === '(default)' ? undefined : databaseId
+  );
+} catch (cacheErr) {
+  console.warn('[Firebase] Initializing default Firestore fallback:', cacheErr);
+  firestoreInstance = databaseId === '(default)' ? getFirestore(app) : getFirestore(app, databaseId);
+}
+
+export const db = firestoreInstance;
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
+/**
+ * Universal timeout wrapper for async promises to prevent indefinite startup hangs
+ */
+export function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallbackValue: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallbackValue), timeoutMs))
+  ]);
+}
+
+/**
+ * Recovers Firestore network connections when returning from browser sleep,
+ * device suspension, or dead/half-open TCP connections.
+ */
+export async function recoverFirestoreNetwork(): Promise<void> {
+  try {
+    await withTimeout(disableNetwork(db), 1500, undefined);
+  } catch {
+    // Ignore disable errors
+  }
+  try {
+    await withTimeout(enableNetwork(db), 2000, undefined);
+    console.info('[Firebase] Network connections re-established successfully');
+  } catch (e) {
+    console.warn('[Firebase] Network re-enable error (will retry on next request):', e);
+  }
+}
+
+/**
+ * Resolves initial auth state with a strict timeout so the application
+ * can never remain stuck in a pending auth loop indefinitely.
+ */
+export async function getInitialAuthState(timeoutMs = 3500): Promise<User | null> {
+  if (auth.currentUser) return auth.currentUser;
+  try {
+    await withTimeout(auth.authStateReady(), timeoutMs, undefined);
+    return auth.currentUser;
+  } catch (err) {
+    console.warn('[Firebase] Initial auth state check timed out:', err);
+    return auth.currentUser || null;
+  }
+}
+
+// Automatic connection restoration when waking from tab suspension or device sleep
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      // Reconnect Firestore socket if tab was asleep/suspended
+      recoverFirestoreNetwork().catch(() => {});
+    }
+  });
+
+  window.addEventListener('online', () => {
+    recoverFirestoreNetwork().catch(() => {});
+  });
+}
 
 // Standard Google Auth Provider for user sign in (profile, email)
 export const googleProvider = new GoogleAuthProvider();
@@ -48,63 +128,97 @@ googleProvider.setCustomParameters({
 });
 
 export async function syncUserProfile(user: User): Promise<void> {
-  try {
-    const userRef = doc(db, 'users', user.uid);
-    const snap = await getDoc(userRef);
-    const isAdminEmail = user.email === 'mdalahi10000@gmail.com';
-    if (!snap.exists()) {
-      await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email || '',
-        displayName: user.displayName || '',
-        photoURL: user.photoURL || '',
-        role: isAdminEmail ? 'admin' : 'client',
-        createdAt: serverTimestamp()
-      });
-      if (isAdminEmail) {
-        await setDoc(doc(db, 'admins', user.uid), {
-          uid: user.uid,
-          email: user.email,
-          role: 'admin',
-          assignedAt: serverTimestamp()
-        });
+  return withTimeout(
+    (async () => {
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const snap = await getDoc(userRef);
+        const isAdminEmail = user.email === 'mdalahi10000@gmail.com';
+        if (!snap.exists()) {
+          await setDoc(userRef, {
+            uid: user.uid,
+            email: user.email || '',
+            displayName: user.displayName || '',
+            photoURL: user.photoURL || '',
+            role: isAdminEmail ? 'admin' : 'client',
+            createdAt: serverTimestamp()
+          });
+          if (isAdminEmail) {
+            await setDoc(doc(db, 'admins', user.uid), {
+              uid: user.uid,
+              email: user.email,
+              role: 'admin',
+              assignedAt: serverTimestamp()
+            });
+          }
+        } else if (isAdminEmail && snap.data()?.role !== 'admin') {
+          await setDoc(userRef, { role: 'admin' }, { merge: true });
+          await setDoc(doc(db, 'admins', user.uid), {
+            uid: user.uid,
+            email: user.email,
+            role: 'admin',
+            assignedAt: serverTimestamp()
+          }, { merge: true });
+        }
+      } catch (err) {
+        console.warn('Could not sync user profile:', err);
       }
-    } else if (isAdminEmail && snap.data()?.role !== 'admin') {
-      await setDoc(userRef, { role: 'admin' }, { merge: true });
-      await setDoc(doc(db, 'admins', user.uid), {
-        uid: user.uid,
-        email: user.email,
-        role: 'admin',
-        assignedAt: serverTimestamp()
-      }, { merge: true });
-    }
-  } catch (err) {
-    console.warn('Could not sync user profile:', err);
-  }
+    })(),
+    3000,
+    undefined
+  );
 }
+
+// In-memory cache of verified admin UIDs to avoid redundant network roundtrips
+const verifiedAdminUids = new Set<string>();
 
 export async function checkIsAdmin(user: User | null): Promise<boolean> {
   if (!user) return false;
   const userEmail = (user.email || '').toLowerCase().trim();
-  if (userEmail === 'mdalahi10000@gmail.com') return true;
-  try {
-    const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-    if (adminDoc.exists()) return true;
-
-    if (userEmail) {
-      const emailDoc = await getDoc(doc(db, 'admins', userEmail));
-      if (emailDoc.exists()) return true;
-
-      const q = query(collection(db, 'admins'), where('email', '==', userEmail));
-      const snap = await getDocs(q);
-      if (!snap.empty) return true;
-    }
-
-    const userDoc = await getDoc(doc(db, 'users', user.uid));
-    return userDoc.exists() && userDoc.data()?.role === 'admin';
-  } catch {
-    return false;
+  if (userEmail === 'mdalahi10000@gmail.com') {
+    verifiedAdminUids.add(user.uid);
+    return true;
   }
+  if (verifiedAdminUids.has(user.uid)) {
+    return true;
+  }
+
+  return withTimeout(
+    (async () => {
+      try {
+        const adminDoc = await getDoc(doc(db, 'admins', user.uid));
+        if (adminDoc.exists()) {
+          verifiedAdminUids.add(user.uid);
+          return true;
+        }
+
+        if (userEmail) {
+          const emailDoc = await getDoc(doc(db, 'admins', userEmail));
+          if (emailDoc.exists()) {
+            verifiedAdminUids.add(user.uid);
+            return true;
+          }
+
+          const q = query(collection(db, 'admins'), where('email', '==', userEmail));
+          const snap = await getDocs(q);
+          if (!snap.empty) {
+            verifiedAdminUids.add(user.uid);
+            return true;
+          }
+        }
+
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const isAdmin = userDoc.exists() && userDoc.data()?.role === 'admin';
+        if (isAdmin) verifiedAdminUids.add(user.uid);
+        return isAdmin;
+      } catch (err) {
+        console.warn('[Firebase] checkIsAdmin query error:', err);
+        return false;
+      }
+    })(),
+    3500,
+    false
+  );
 }
 
 export async function loginWithGoogle(): Promise<User | null> {
@@ -212,6 +326,9 @@ export function subscribeToReviews(callback: (reviews: StoredReview[]) => void) 
         const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt?.seconds ? b.createdAt.seconds * 1000 : (b.createdAt ? new Date(b.createdAt).getTime() : 0));
         return (timeB || 0) - (timeA || 0);
       });
+      if (list.length > 0) {
+        setCachedData(CACHE_KEYS.REVIEWS, list);
+      }
       callback(list);
     }, (error) => {
       console.warn('Reviews subscription error:', error);

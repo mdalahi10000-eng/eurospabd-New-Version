@@ -3,10 +3,19 @@ import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth, subscribeToReviews, StoredReview } from './firebase';
 import { SPA_INFO, SERVICES_DATA, PHOTOS_DATA } from './data/spaData';
 import { Service, PriceOption, PhotoItem, BusinessInfo, ServiceArea } from './types';
-import { subscribeToGoogleBusinessSync, SyncedGoogleData } from './services/googleBusinessProfile';
-import { fetchPublicServices } from './services/servicesService';
-import { fetchPublicGallery } from './services/galleryService';
-import { fetchBusinessInfo, subscribeToBusinessInfo, fetchPublicServiceAreas, injectLocalBusinessSchema, DEFAULT_BUSINESS_INFO } from './services/localSeoService';
+import { subscribeToGoogleBusinessSync, SyncedGoogleData, getInitialGoogleBusinessSync } from './services/googleBusinessProfile';
+import { fetchPublicServices, subscribeToPublicServices, getInitialServices } from './services/servicesService';
+import { fetchPublicGallery, subscribeToPublicGallery, getInitialGallery } from './services/galleryService';
+import { 
+  fetchBusinessInfo, 
+  subscribeToBusinessInfo, 
+  fetchPublicServiceAreas, 
+  injectLocalBusinessSchema, 
+  DEFAULT_BUSINESS_INFO,
+  getInitialBusinessInfo,
+  getInitialServiceAreas
+} from './services/localSeoService';
+import { getCachedData, hasCachedData, CACHE_KEYS } from './services/cacheService';
 
 import { Header } from './components/Header';
 import { NavTabs, TabType } from './components/NavTabs';
@@ -17,8 +26,8 @@ import { FaqSection } from './components/FaqSection';
 import { LocationContactSection } from './components/LocationContactSection';
 import { Footer } from './components/Footer';
 import { ShareToast } from './components/ShareToast';
-import { subscribeToHomepageContent, HomepageContent, DEFAULT_HOMEPAGE_CONTENT } from './services/homepageService';
-import { subscribeToAboutContent, AboutContent, DEFAULT_ABOUT_CONTENT } from './services/aboutService';
+import { subscribeToHomepageContent, HomepageContent, DEFAULT_HOMEPAGE_CONTENT, getInitialHomepageContent } from './services/homepageService';
+import { subscribeToAboutContent, AboutContent, DEFAULT_ABOUT_CONTENT, getInitialAboutContent } from './services/aboutService';
 
 import { ServiceModal } from './components/modals/ServiceModal';
 import { ReviewsModal } from './components/modals/ReviewsModal';
@@ -40,19 +49,19 @@ export default function App() {
   const { match } = useLocationPath();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [firebaseReviews, setFirebaseReviews] = useState<StoredReview[]>([]);
-  const [syncedGoogleData, setSyncedGoogleData] = useState<SyncedGoogleData | null>(null);
+  const [firebaseReviews, setFirebaseReviews] = useState<StoredReview[]>(() => getCachedData<StoredReview[]>(CACHE_KEYS.REVIEWS) || []);
+  const [syncedGoogleData, setSyncedGoogleData] = useState<SyncedGoogleData | null>(() => getInitialGoogleBusinessSync());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [services, setServices] = useState<Service[]>([]);
-  const [servicesLoading, setServicesLoading] = useState<boolean>(true);
+  const [services, setServices] = useState<Service[]>(() => getInitialServices());
+  const [servicesLoading, setServicesLoading] = useState<boolean>(() => !hasCachedData(CACHE_KEYS.SERVICES));
   const [servicesError, setServicesError] = useState<boolean>(false);
-  const [galleryImages, setGalleryImages] = useState<PhotoItem[]>([]);
-  const [galleryLoading, setGalleryLoading] = useState<boolean>(true);
-  const [reviewsLoading, setReviewsLoading] = useState<boolean>(true);
-  const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(DEFAULT_BUSINESS_INFO);
-  const [serviceAreas, setServiceAreas] = useState<ServiceArea[]>([]);
-  const [homepageContent, setHomepageContent] = useState<HomepageContent>(DEFAULT_HOMEPAGE_CONTENT);
-  const [aboutContent, setAboutContent] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
+  const [galleryImages, setGalleryImages] = useState<PhotoItem[]>(() => getInitialGallery());
+  const [galleryLoading, setGalleryLoading] = useState<boolean>(() => !hasCachedData(CACHE_KEYS.GALLERY));
+  const [reviewsLoading, setReviewsLoading] = useState<boolean>(() => !hasCachedData(CACHE_KEYS.REVIEWS));
+  const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(() => getInitialBusinessInfo());
+  const [serviceAreas, setServiceAreas] = useState<ServiceArea[]>(() => getInitialServiceAreas());
+  const [homepageContent, setHomepageContent] = useState<HomepageContent>(() => getInitialHomepageContent());
+  const [aboutContent, setAboutContent] = useState<AboutContent>(() => getInitialAboutContent());
 
   // Subscribe to real-time homepage and about CMS content from Firestore
   useEffect(() => {
@@ -68,58 +77,65 @@ export default function App() {
     };
   }, []);
 
-  // Fetch live active services from Firestore
+  // Multi-tab and immediate cache update listener
   useEffect(() => {
-    let isMounted = true;
-    fetchPublicServices()
-      .then((items) => {
-        if (isMounted) {
-          if (items && items.length > 0) {
-            setServices(items);
-          } else {
-            setServices([]);
-          }
+    const handleCacheUpdated = (e: Event) => {
+      const custom = e as CustomEvent<{ key: string; data: any }>;
+      if (!custom.detail) return;
+      const { key, data } = custom.detail;
+      switch (key) {
+        case CACHE_KEYS.HOMEPAGE:
+          setHomepageContent(data);
+          break;
+        case CACHE_KEYS.BUSINESS:
+          setBusinessInfo(data);
+          break;
+        case CACHE_KEYS.SERVICES:
+          setServices(data);
           setServicesLoading(false);
-          setServicesError(false);
-        }
-      })
-      .catch((err) => {
-        console.warn('Could not load services:', err);
-        if (isMounted) {
-          setServices(SERVICES_DATA);
-          setServicesError(true);
-          setServicesLoading(false);
-        }
-      });
-    return () => {
-      isMounted = false;
+          break;
+        case CACHE_KEYS.GALLERY:
+          setGalleryImages(data);
+          setGalleryLoading(false);
+          break;
+        case CACHE_KEYS.SERVICE_AREAS:
+          setServiceAreas(data);
+          break;
+        case CACHE_KEYS.ABOUT:
+          setAboutContent(data);
+          break;
+      }
     };
+
+    window.addEventListener('eurospa_cache_updated', handleCacheUpdated);
+    return () => window.removeEventListener('eurospa_cache_updated', handleCacheUpdated);
   }, []);
 
-  // Fetch live active gallery photos from Firestore
+  // Real-time listener for public active services from Firestore
   useEffect(() => {
-    let isMounted = true;
-    fetchPublicGallery()
-      .then((items) => {
-        if (isMounted) {
-          if (items && items.length > 0) {
-            setGalleryImages(items);
-          } else {
-            setGalleryImages(PHOTOS_DATA);
-          }
-          setGalleryLoading(false);
-        }
-      })
-      .catch((err) => {
-        console.warn('Could not load gallery:', err);
-        if (isMounted) {
-          setGalleryImages(PHOTOS_DATA);
-          setGalleryLoading(false);
-        }
-      });
-    return () => {
-      isMounted = false;
-    };
+    const unsubServices = subscribeToPublicServices((items) => {
+      if (items && items.length > 0) {
+        setServices(items);
+      } else {
+        setServices(getInitialServices());
+      }
+      setServicesLoading(false);
+      setServicesError(false);
+    });
+    return () => unsubServices();
+  }, []);
+
+  // Real-time listener for public active gallery photos from Firestore
+  useEffect(() => {
+    const unsubGallery = subscribeToPublicGallery((items) => {
+      if (items && items.length > 0) {
+        setGalleryImages(items);
+      } else {
+        setGalleryImages(getInitialGallery());
+      }
+      setGalleryLoading(false);
+    });
+    return () => unsubGallery();
   }, []);
 
  // Fetch live canonical business info and active service areas from Firestore

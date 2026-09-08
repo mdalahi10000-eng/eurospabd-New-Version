@@ -21,8 +21,10 @@ import {
   AboutContent, 
   DEFAULT_ABOUT_CONTENT, 
   fetchAboutContent, 
-  subscribeToAboutContent 
+  subscribeToAboutContent,
+  getInitialAboutContent
 } from '../services/aboutService';
+import { hasCachedData, CACHE_KEYS } from '../services/cacheService';
 import { BusinessInfo, ServiceArea } from '../types';
 import { SPA_INFO } from '../data/spaData';
 import { navigate } from '../router';
@@ -55,8 +57,8 @@ export function AboutPage({
   businessInfo,
   serviceAreas
 }: AboutPageProps) {
-  const [content, setContent] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [content, setContent] = useState<AboutContent>(() => getInitialAboutContent());
+  const [loading, setLoading] = useState<boolean>(() => !hasCachedData(CACHE_KEYS.ABOUT));
 
   const name = businessInfo?.businessName || SPA_INFO.name || 'Euro Spa Center';
   const phone = businessInfo?.phone || SPA_INFO.phone;

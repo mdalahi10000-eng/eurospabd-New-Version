@@ -60,14 +60,10 @@ export function ReviewsModal({
       adminResponse: (r as any).adminResponse
     }));
 
-  // Track all Firestore IDs (including hidden ones) to avoid duplicating initial reviews
-  const allFirebaseIds = new Set(firebaseReviews.map(r => r.id));
-  const remainingBase = baseReviews.filter(b => !allFirebaseIds.has(b.id));
-
-  const combinedReviews = [
-    ...approvedFirebase,
-    ...remainingBase
-  ];
+  // If Firebase reviews are loaded/cached, use them as the primary source of truth
+  const combinedReviews = firebaseReviews.length > 0
+    ? approvedFirebase
+    : baseReviews;
 
   const displayRating = syncedRating ?? SPA_INFO.rating;
   const displayCount = syncedCount ?? Math.max(SPA_INFO.reviewsCount, combinedReviews.length);

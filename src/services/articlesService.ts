@@ -9,12 +9,14 @@ import {
   query, 
   where, 
   limit,
-  serverTimestamp 
+  serverTimestamp,
+  onSnapshot
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '../firebase';
+import { db, storage, withTimeout } from '../firebase';
 import { Article } from '../types';
 import { SERVICES_DATA, PHOTOS_DATA } from '../data/spaData';
+import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
 /**
  * Utility: generate SEO-friendly slug from text
@@ -153,6 +155,10 @@ export async function createArticle(data: Omit<Article, 'id'>): Promise<string> 
   };
 
   const docRef = await addDoc(collection(db, 'articles'), articlePayload);
+  if (articlePayload.status === 'published') {
+    const current = getInitialArticles();
+    setCachedData(CACHE_KEYS.ARTICLES, [{ ...articlePayload, id: docRef.id }, ...current]);
+  }
   return docRef.id;
 }
 
@@ -180,6 +186,12 @@ export async function updateArticle(id: string, updates: Partial<Article>): Prom
   });
 
   await updateDoc(articleRef, cleanedUpdates);
+  const current = getInitialArticles();
+  if (cleanedUpdates.status === 'draft') {
+    setCachedData(CACHE_KEYS.ARTICLES, current.filter(a => a.id !== id));
+  } else {
+    setCachedData(CACHE_KEYS.ARTICLES, current.map(a => a.id === id ? { ...a, ...cleanedUpdates } : a));
+  }
 }
 
 /**
@@ -188,6 +200,8 @@ export async function updateArticle(id: string, updates: Partial<Article>): Prom
 export async function deleteArticle(id: string): Promise<void> {
   const articleRef = doc(db, 'articles', id);
   await deleteDoc(articleRef);
+  const current = getInitialArticles();
+  setCachedData(CACHE_KEYS.ARTICLES, current.filter(a => a.id !== id));
 }
 
 /**
@@ -213,6 +227,56 @@ export async function toggleArticlePublish(article: Article): Promise<'draft' | 
 }
 
 /**
+ * Returns the latest synchronously available published articles (from cache if available)
+ */
+export function getInitialArticles(): Article[] {
+  const cached = getCachedData<Article[]>(CACHE_KEYS.ARTICLES);
+  if (cached && Array.isArray(cached) && cached.length > 0) {
+    return cached;
+  }
+  return [];
+}
+
+/**
+ * Real-time listener for published articles with automatic cache synchronization
+ */
+export function subscribeToPublishedArticles(callback: (articles: Article[]) => void): () => void {
+  try {
+    const q = query(
+      collection(db, 'articles'),
+      where('status', '==', 'published')
+    );
+    return onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        } as Article));
+
+        const sorted = list.sort((a, b) => {
+          const timeA = new Date(a.publishedAt || (a.createdAt?.toDate ? a.createdAt.toDate() : 0)).getTime();
+          const timeB = new Date(b.publishedAt || (b.createdAt?.toDate ? b.createdAt.toDate() : 0)).getTime();
+          return timeB - timeA;
+        });
+
+        setCachedData(CACHE_KEYS.ARTICLES, sorted);
+        callback(sorted);
+      } else {
+        const initial = getInitialArticles();
+        callback(initial);
+      }
+    }, (err) => {
+      console.warn('subscribeToPublishedArticles onSnapshot notice:', err);
+      const fallback = getInitialArticles();
+      callback(fallback);
+    });
+  } catch (err) {
+    console.warn('Error subscribing to published articles:', err);
+    return () => {};
+  }
+}
+
+/**
  * Fetch all published articles from Firestore.
  * Strictly queries Firebase Firestore without creating fake articles.
  * Returns an empty array if there are currently no published articles.
@@ -231,17 +295,20 @@ export async function fetchPublishedArticles(): Promise<Article[]> {
         ...doc.data()
       } as Article));
 
-      return list.sort((a, b) => {
+      const sorted = list.sort((a, b) => {
         const timeA = new Date(a.publishedAt || (a.createdAt?.toDate ? a.createdAt.toDate() : 0)).getTime();
         const timeB = new Date(b.publishedAt || (b.createdAt?.toDate ? b.createdAt.toDate() : 0)).getTime();
         return timeB - timeA;
       });
+
+      setCachedData(CACHE_KEYS.ARTICLES, sorted);
+      return sorted;
     }
   } catch (err) {
     console.warn('Firestore articles query notice:', err);
   }
 
-  return [];
+  return getInitialArticles();
 }
 
 /**
@@ -314,66 +381,76 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   let recentReviews: any[] = [];
 
   try {
-    const appointmentsSnap = await getDocs(collection(db, 'appointments'));
-    totalAppointments = appointmentsSnap.size;
-    const allAppts = appointmentsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-    
-    // Sort recent if timestamp exists
-    allAppts.sort((a, b) => {
-      const timeA = a.createdAt?.seconds || 0;
-      const timeB = b.createdAt?.seconds || 0;
-      return timeB - timeA;
-    });
+    const appointmentsSnap = await withTimeout(getDocs(collection(db, 'appointments')), 3000, null as any);
+    if (appointmentsSnap) {
+      totalAppointments = appointmentsSnap.size;
+      const allAppts = appointmentsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as any));
+      
+      // Sort recent if timestamp exists
+      allAppts.sort((a: any, b: any) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
 
-    recentAppointments = allAppts.slice(0, 5);
-    allAppts.forEach(a => {
-      if (a.status === 'pending') pendingAppointments++;
-      else if (a.status === 'confirmed') confirmedAppointments++;
-    });
+      recentAppointments = allAppts.slice(0, 5);
+      allAppts.forEach((a: any) => {
+        if (a.status === 'pending') pendingAppointments++;
+        else if (a.status === 'confirmed') confirmedAppointments++;
+      });
+    }
   } catch (e) {
     console.warn('Appointments count notice:', e);
   }
 
   try {
-    const reviewsSnap = await getDocs(collection(db, 'reviews'));
-    totalReviews = reviewsSnap.size;
-    const allRevs = reviewsSnap.docs.map(d => ({ id: d.id, ...d.data() } as any));
-    
-    let sumRate = 0;
-    allRevs.forEach(r => {
-      if (r.status !== 'hidden') approvedReviews++;
-      sumRate += typeof r.rating === 'number' ? r.rating : 5;
-    });
+    const reviewsSnap = await withTimeout(getDocs(collection(db, 'reviews')), 3000, null as any);
+    if (reviewsSnap) {
+      totalReviews = reviewsSnap.size;
+      const allRevs = reviewsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as any));
+      
+      let sumRate = 0;
+      allRevs.forEach((r: any) => {
+        if (r.status !== 'hidden') approvedReviews++;
+        sumRate += typeof r.rating === 'number' ? r.rating : 5;
+      });
 
-    if (allRevs.length > 0) {
-      averageRating = parseFloat((sumRate / allRevs.length).toFixed(1));
+      if (allRevs.length > 0) {
+        averageRating = parseFloat((sumRate / allRevs.length).toFixed(1));
+      }
+
+      allRevs.sort((a: any, b: any) => {
+        const timeA = a.createdAt?.seconds || 0;
+        const timeB = b.createdAt?.seconds || 0;
+        return timeB - timeA;
+      });
+      recentReviews = allRevs.slice(0, 4);
     }
-
-    allRevs.sort((a, b) => {
-      const timeA = a.createdAt?.seconds || 0;
-      const timeB = b.createdAt?.seconds || 0;
-      return timeB - timeA;
-    });
-    recentReviews = allRevs.slice(0, 4);
   } catch (e) {
     console.warn('Reviews count notice:', e);
   }
 
   try {
-    const allArticlesSnap = await getDocs(collection(db, 'articles'));
-    totalArticles = allArticlesSnap.size;
-    const pubSnap = await getDocs(
-      query(collection(db, 'articles'), where('status', '==', 'published'))
-    );
-    publishedArticles = pubSnap.size;
+    const allArticlesSnap = await withTimeout(getDocs(collection(db, 'articles')), 3000, null as any);
+    if (allArticlesSnap) {
+      totalArticles = allArticlesSnap.size;
+      const pubSnap = await withTimeout(
+        getDocs(query(collection(db, 'articles'), where('status', '==', 'published'))),
+        3000,
+        null as any
+      );
+      if (pubSnap) {
+        publishedArticles = pubSnap.size;
+      }
+    }
   } catch (e) {
     console.warn('Articles count notice:', e);
   }
 
   let totalServices = SERVICES_DATA.length;
   try {
-    const servicesSnap = await getDocs(collection(db, 'services'));
-    if (!servicesSnap.empty) {
+    const servicesSnap = await withTimeout(getDocs(collection(db, 'services')), 3000, null as any);
+    if (servicesSnap && !servicesSnap.empty) {
       totalServices = servicesSnap.size;
     }
   } catch (e) {
@@ -382,8 +459,8 @@ export async function fetchAdminStats(): Promise<AdminStats> {
 
   let galleryImages = PHOTOS_DATA.length;
   try {
-    const gallerySnap = await getDocs(collection(db, 'gallery'));
-    if (!gallerySnap.empty) {
+    const gallerySnap = await withTimeout(getDocs(collection(db, 'gallery')), 3000, null as any);
+    if (gallerySnap && !gallerySnap.empty) {
       galleryImages = gallerySnap.size;
     }
   } catch (e) {

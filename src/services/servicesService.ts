@@ -10,13 +10,15 @@ import {
   query, 
   where, 
   orderBy, 
-  serverTimestamp 
+  serverTimestamp,
+  onSnapshot
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth, checkIsAdmin } from '../firebase';
 import { Service, PriceOption } from '../types';
 import { SERVICES_DATA, SPA_INFO } from '../data/spaData';
 import { buildCanonicalUrl } from '../config/seoConfig';
+import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
 /**
  * Utility: generate SEO-friendly lowercase hyphenated slug from service name
@@ -164,6 +166,45 @@ export async function seedInitialServicesIfEmpty(): Promise<Service[]> {
 }
 
 /**
+ * Returns the latest synchronously available active services (from cache if available)
+ */
+export function getInitialServices(): Service[] {
+  const cached = getCachedData<Service[]>(CACHE_KEYS.SERVICES);
+  if (cached && Array.isArray(cached) && cached.length > 0) {
+    return cached;
+  }
+  return SERVICES_DATA.map((s, idx) => mapStaticServiceToFullService(s, idx));
+}
+
+/**
+ * Real-time listener for active public services with automatic cache synchronization
+ */
+export function subscribeToPublicServices(callback: (services: Service[]) => void): () => void {
+  try {
+    const q = query(collection(db, 'services'), where('status', '==', 'active'));
+    return onSnapshot(q, (snap) => {
+      if (!snap.empty) {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Service));
+        const sorted = list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+        setCachedData(CACHE_KEYS.SERVICES, sorted);
+        callback(sorted);
+      } else {
+        // Empty in Firestore, fallback to initial cached or mapped
+        const initial = getInitialServices();
+        callback(initial);
+      }
+    }, (err) => {
+      console.warn('subscribeToPublicServices onSnapshot notice:', err);
+      const fallback = getInitialServices();
+      callback(fallback);
+    });
+  } catch (err) {
+    console.warn('Error subscribing to public services:', err);
+    return () => {};
+  }
+}
+
+/**
  * Fetch all active services for the public website
  */
 export async function fetchPublicServices(): Promise<Service[]> {
@@ -173,14 +214,16 @@ export async function fetchPublicServices(): Promise<Service[]> {
 
     if (!snap.empty) {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Service));
-      return list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+      const sorted = list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+      setCachedData(CACHE_KEYS.SERVICES, sorted);
+      return sorted;
     }
 
     // Collection returned empty
-    return [];
+    return getInitialServices();
   } catch (err) {
     console.warn('Public services fetch notice:', err);
-    throw err;
+    return getInitialServices();
   }
 }
 
@@ -251,6 +294,9 @@ export async function createService(data: Omit<Service, 'id'>): Promise<string> 
   };
 
   const docRef = await addDoc(collection(db, 'services'), payload);
+  const newService = { ...payload, id: docRef.id };
+  const current = getInitialServices();
+  setCachedData(CACHE_KEYS.SERVICES, [...current, newService]);
   return docRef.id;
 }
 
@@ -274,6 +320,11 @@ export async function updateService(id: string, updates: Partial<Service>): Prom
   });
 
   await updateDoc(serviceRef, cleanedUpdates);
+
+  // Proactively update cached services immediately
+  const current = getInitialServices();
+  const updatedList = current.map(s => s.id === id ? { ...s, ...cleanedUpdates } : s);
+  setCachedData(CACHE_KEYS.SERVICES, updatedList);
 }
 
 /**
@@ -282,6 +333,11 @@ export async function updateService(id: string, updates: Partial<Service>): Prom
 export async function deleteService(id: string): Promise<void> {
   const serviceRef = doc(db, 'services', id);
   await deleteDoc(serviceRef);
+
+  // Proactively update cached services immediately
+  const current = getInitialServices();
+  const filtered = current.filter(s => s.id !== id);
+  setCachedData(CACHE_KEYS.SERVICES, filtered);
 }
 
 /**
