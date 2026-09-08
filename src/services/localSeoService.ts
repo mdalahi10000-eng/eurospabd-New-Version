@@ -489,14 +489,16 @@ export function injectLocalBusinessSchema(
   const schemaObj = generateLocalBusinessSchema(info, activeAreas);
   const jsonStr = JSON.stringify(schemaObj, null, 2);
 
-  let scriptEl = document.getElementById('dynamic-local-business-schema') as HTMLScriptElement | null;
-  if (!scriptEl) {
-    scriptEl = document.createElement('script');
-    scriptEl.id = 'dynamic-local-business-schema';
-    scriptEl.type = 'application/ld+json';
-    document.head.appendChild(scriptEl);
-  }
-  scriptEl.textContent = jsonStr;
+  let scriptEl = document.getElementById('euro-spa-local-business-schema') as HTMLScriptElement | null;
+
+if (!scriptEl) {
+  scriptEl = document.createElement('script');
+  scriptEl.id = 'euro-spa-local-business-schema';
+  scriptEl.type = 'application/ld+json';
+  document.head.appendChild(scriptEl);
+}
+
+scriptEl.textContent = jsonStr;
 }
 
 export interface LocalSeoAuditItem {
