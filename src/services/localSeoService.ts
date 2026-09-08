@@ -89,67 +89,85 @@ export const DEFAULT_SERVICE_AREAS: Omit<ServiceArea, 'id'>[] = [
   {
     name: 'Banani',
     slug: 'banani',
-    shortDescription: 'Primary location of Euro Spa Center on Road 6, Banani with luxury suites and certified therapists.',
-    content: 'Euro Spa Center is located in the heart of Banani, Dhaka at 73 Road No. 6. Our Banani flagship center features private sanitized treatment rooms, premium aromatherapy oils, and certified massage therapists specializing in Swedish massage, deep tissue, hot stone, and couples therapies.',
+    shortDescription:
+      'Euro Spa Center at 73 Road No. 6, Banani, Dhaka offers professional massage and wellness treatments in a clean, comfortable environment.',
+    content:
+      'Euro Spa Center is located at 73 Road No. 6, Banani, Dhaka. Our Banani center offers professional Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, and other wellness treatments in a clean and comfortable environment. Clients can contact us to book an appointment and visit during our daily operating hours from 10:00 AM to 10:00 PM.',
     status: 'active',
     seoTitle: 'Spa in Banani, Dhaka | Euro Spa Center',
-    metaDescription: 'Visit Euro Spa Center on Road 6, Banani, Dhaka for authentic Swedish massage, deep tissue therapy, aromatherapy, and private luxury suites.',
-    focusKeyword: 'Spa in Banani',
+    metaDescription:
+      'Visit Euro Spa Center at 73 Road No. 6, Banani, Dhaka for professional massage and wellness treatments.',
+    focusKeyword: 'spa in Banani',
     displayOrder: 1
   },
   {
     name: 'Gulshan',
     slug: 'gulshan',
-    shortDescription: 'Serving residents and corporate professionals across Gulshan 1 and Gulshan 2.',
-    content: 'Just minutes away from Gulshan-1 and Gulshan-2 circles, Euro Spa Center provides residents and busy professionals with world-class relaxation therapies. Experience deep muscular stress relief, authentic aroma oils, and peaceful privacy in our nearby Banani location.',
+    shortDescription:
+      'Euro Spa Center serves clients in Gulshan, Dhaka with professional massage and wellness treatments in a clean, comfortable environment.',
+    content:
+      'Euro Spa Center serves clients from Gulshan and nearby areas of Dhaka from our spa center at 73 Road No. 6, Banani. Our location is convenient for Gulshan residents, professionals, and visitors seeking a relaxing wellness experience. We offer Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, and other professional wellness treatments in a clean and comfortable environment. Contact us to book an appointment, with services available daily from 10:00 AM to 10:00 PM.',
     status: 'active',
-    seoTitle: 'Spa & Massage near Gulshan, Dhaka | Euro Spa Center',
-    metaDescription: 'Looking for a premier spa near Gulshan, Dhaka? Euro Spa Center offers certified massage therapists, tranquil suites, and rejuvenating therapies.',
-    focusKeyword: 'Spa near Gulshan',
+    seoTitle: 'Spa & Massage in Gulshan, Dhaka | Euro Spa Center',
+    metaDescription:
+      'Euro Spa Center serves Gulshan, Dhaka with Swedish, deep tissue, aromatherapy and hot stone massage in a clean, comfortable environment.',
+    focusKeyword: 'spa and massage in Gulshan',
     displayOrder: 2
   },
   {
     name: 'Baridhara',
     slug: 'baridhara',
-    shortDescription: 'Accessible luxury wellness therapies for Baridhara Diplomatic Zone and DOHS.',
-    content: 'Euro Spa Center is situated conveniently close to the Baridhara Diplomatic Zone and Baridhara DOHS. We provide diplomats, expats, and residents with discrete, high-standard massage therapies and international spa wellness treatments.',
+    shortDescription:
+      'Euro Spa Center serves clients in Baridhara, Dhaka with professional massage and wellness treatments in a clean, comfortable environment.',
+    content:
+      'Euro Spa Center serves clients from Baridhara and nearby areas of Dhaka from our spa center at 73 Road No. 6, Banani. Our location offers access to professional Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, and other wellness treatments in a clean and comfortable environment. Contact us to book an appointment, with services available daily from 10:00 AM to 10:00 PM.',
     status: 'active',
-    seoTitle: 'Luxury Spa near Baridhara, Dhaka | Euro Spa Center',
-    metaDescription: 'Exclusive therapeutic massage and relaxation therapies near Baridhara Diplomatic Zone at Euro Spa Center Banani. Certified therapists and hygienic suites.',
-    focusKeyword: 'Spa near Baridhara',
+    seoTitle: 'Spa & Massage in Baridhara, Dhaka | Euro Spa Center',
+    metaDescription:
+      'Euro Spa Center serves Baridhara, Dhaka with Swedish, deep tissue, aromatherapy and hot stone massage in a clean, comfortable environment.',
+    focusKeyword: 'spa and massage in Baridhara',
     displayOrder: 3
   },
   {
     name: 'Dhanmondi',
     slug: 'dhanmondi',
-    shortDescription: 'Top-rated relaxation and wellness therapies serving Dhanmondi clients.',
-    content: 'Clients visiting from Dhanmondi choose Euro Spa Center for authentic Swedish, deep tissue, and four-hand body therapies. Our certified therapists provide customized massage pressure in a calm, noise-free sanctuary.',
+    shortDescription:
+      'Euro Spa Center serves clients in Dhanmondi, Dhaka with professional massage and wellness treatments in a clean and comfortable environment.',
+    content:
+      'Euro Spa Center serves clients from Dhanmondi and nearby areas of Dhaka from our spa center at 73 Road No. 6, Banani. Our Banani location provides access to professional Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, and other wellness treatments for clients seeking relaxation and wellness services. Contact us to book an appointment, with services available daily from 10:00 AM to 10:00 PM.',
     status: 'active',
-    seoTitle: 'Spa & Massage Services for Dhanmondi Residents | Euro Spa Center',
-    metaDescription: 'Premier body massage therapies, aromatherapy, and wellness treatments serving Dhanmondi residents at Euro Spa Center, Dhaka.',
-    focusKeyword: 'Spa services for Dhanmondi',
+    seoTitle: 'Spa & Massage in Dhanmondi, Dhaka | Euro Spa Center',
+    metaDescription:
+      'Looking for spa and massage services in Dhanmondi, Dhaka? Visit Euro Spa Center in Banani for professional wellness treatments.',
+    focusKeyword: 'spa and massage in Dhanmondi',
     displayOrder: 4
   },
   {
     name: 'Uttara',
     slug: 'uttara',
-    shortDescription: 'Certified massage and rejuvenating spa therapies accessible for Uttara residents.',
-    content: 'Accessible via Dhaka Expressway and Airport Road, Euro Spa Center welcomes clients from Uttara seeking exceptional therapeutic care, authentic hot stone therapy, and revitalizing body scrubs.',
+    shortDescription:
+      'Euro Spa Center serves clients in Uttara, Dhaka with professional massage and wellness treatments in a clean and comfortable environment.',
+    content:
+      'Euro Spa Center serves clients from Uttara and nearby areas of Dhaka from our spa center at 73 Road No. 6, Banani. Our Banani location offers professional Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, and other wellness treatments for clients seeking relaxation and wellness services. Contact us to book an appointment, with services available daily from 10:00 AM to 10:00 PM.',
     status: 'active',
-    seoTitle: 'Spa & Massage Therapy for Uttara Residents | Euro Spa Center',
-    metaDescription: 'Experience premier Swedish massage and body therapy at Euro Spa Center, trusted by wellness enthusiasts from Uttara and across Dhaka.',
-    focusKeyword: 'Spa therapy for Uttara',
+    seoTitle: 'Spa & Massage in Uttara, Dhaka | Euro Spa Center',
+    metaDescription:
+      'Looking for spa and massage services in Uttara, Dhaka? Visit Euro Spa Center in Banani for professional massage and wellness treatments.',
+    focusKeyword: 'spa and massage in Uttara',
     displayOrder: 5
   },
   {
     name: 'Dhaka',
     slug: 'dhaka',
-    shortDescription: 'Premier destination for authentic therapeutic massage across the greater Dhaka area.',
-    content: 'Euro Spa Center is a premier wellness destination in Dhaka, Bangladesh. We are dedicated to authentic therapeutic massage practices, maintaining stringent hygiene standards, and delivering an unforgettable relaxation journey.',
+    shortDescription:
+      'Euro Spa Center offers professional spa, massage, and wellness treatments for clients across Dhaka from our Banani location.',
+    content:
+      'Euro Spa Center is a professional spa and wellness center located at 73 Road No. 6, Banani, Dhaka 1213. We welcome clients from across Dhaka looking for professional Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, Body Scrub, and other wellness treatments. Our Banani center provides a clean, comfortable, and relaxing environment, with appointments available daily from 10:00 AM to 10:00 PM. Contact Euro Spa Center to book a session or learn more about our available treatments.',
     status: 'active',
-    seoTitle: 'Best Spa & Massage Center in Dhaka | Euro Spa Center',
-    metaDescription: 'Euro Spa Center is a leading day spa in Dhaka, Bangladesh offering Swedish massage, aromatherapy, four-hand therapy, and rejuvenating body scrubs.',
-    focusKeyword: 'Best Spa in Dhaka',
+    seoTitle: 'Spa & Massage in Dhaka | Euro Spa Center',
+    metaDescription:
+      'Spa and massage in Dhaka at Euro Spa Center, Banani. Enjoy Swedish, deep tissue, aromatherapy, hot stone massage and wellness treatments.',
+    focusKeyword: 'spa and massage in Dhaka',
     displayOrder: 6
   }
 ];
