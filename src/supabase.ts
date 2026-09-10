@@ -337,7 +337,11 @@ export async function deleteFromSupabaseStorage(
   try {
     if (!isSupabaseConfigured()) return { error: null };
     const client = getSupabase();
-    await client.storage.from(bucketName).remove([filePath]);
+    const { data, error } = await client.storage.from(bucketName).remove([filePath]);
+    if (error) {
+      console.warn('[Supabase Storage] Delete error:', error);
+      return { error };
+    }
     return { error: null };
   } catch (err) {
     console.warn('[Supabase Storage] Delete error:', err);

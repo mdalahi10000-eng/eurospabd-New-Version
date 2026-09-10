@@ -110,9 +110,19 @@ export async function uploadGalleryFile(
   fileSize: number;
   mimeType: string;
 }> {
-  // Validate MIME type
+  // Validate and resolve MIME type
+  const rawType = (file.type || '').toLowerCase().trim();
+  let resolvedType = rawType;
+  if (!resolvedType) {
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (ext === 'jpg' || ext === 'jpeg') resolvedType = 'image/jpeg';
+    else if (ext === 'png') resolvedType = 'image/png';
+    else if (ext === 'webp') resolvedType = 'image/webp';
+    else if (ext === 'svg') resolvedType = 'image/svg+xml';
+  }
+
   const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/svg+xml'];
-  if (!allowedMimeTypes.includes(file.type)) {
+  if (!allowedMimeTypes.includes(resolvedType)) {
     throw new Error('Unsupported image format. Please upload WebP, JPEG, PNG, or SVG images.');
   }
 
@@ -140,16 +150,23 @@ export async function uploadGalleryFile(
   try {
     const client = getSupabase();
 
+    // Verify session exists before attempting storage upload
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) {
+      throw new Error('Authentication required. Please sign in to your administrator account before uploading.');
+    }
+
     // Upload directly to the existing public 'spa-assets' bucket
     const { data, error: uploadError } = await client.storage
       .from('spa-assets')
       .upload(filePath, file, {
         cacheControl: '3600',
         upsert: true,
-        contentType: file.type,
+        contentType: resolvedType,
       });
 
     if (uploadError) {
+      console.error('[Supabase Storage] Upload error detail:', uploadError);
       throw uploadError;
     }
 
@@ -166,7 +183,7 @@ export async function uploadGalleryFile(
       storagePath: filePath,
       fileName: seoFileName,
       fileSize: file.size,
-      mimeType: file.type
+      mimeType: resolvedType
     };
   } catch (err: any) {
     clearInterval(progressInterval);
@@ -338,7 +355,7 @@ export async function fetchAllGalleryAdmin(): Promise<GalleryImage[]> {
 }
 
 /**
- * Create a new gallery image document in Firestore
+ * Create a new gallery image document
  */
 export async function createGalleryImage(
   data: Omit<GalleryImage, 'id'>, 
@@ -347,7 +364,7 @@ export async function createGalleryImage(
   const docId = customId || `photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const docRef = doc(db, 'gallery', docId);
 
-  const payload = {
+  const payload: GalleryImage = {
     ...data,
     id: docId,
     status: data.status || 'active',
@@ -360,15 +377,26 @@ export async function createGalleryImage(
     updatedAt: new Date().toISOString()
   };
 
-  await setDoc(docRef, payload);
-
+  // 1. Primary write to Supabase database
   if (isSupabaseConfigured()) {
     try {
       const supaRow = mapGalleryToSupabaseRow(payload);
-      await (getSupabase().from('gallery') as any).upsert(supaRow);
-    } catch (err) {
-      console.warn('[Supabase] createGalleryImage sync error:', err);
+      const { error: supaErr } = await (getSupabase().from('gallery') as any).upsert(supaRow);
+      if (supaErr) {
+        console.error('[Supabase] createGalleryImage error:', supaErr);
+        throw new Error(supaErr.message || 'Failed to save gallery item in Supabase.');
+      }
+    } catch (err: any) {
+      console.error('[Supabase] createGalleryImage exception:', err);
+      throw err;
     }
+  }
+
+  // 2. Best-effort Firestore sync (non-fatal, will never throw permission denied)
+  try {
+    await setDoc(docRef, payload);
+  } catch (fsErr) {
+    console.warn('[Firestore] Sync notice (non-fatal):', fsErr);
   }
 
   const current = getInitialGallery();
@@ -382,18 +410,30 @@ export async function createGalleryImage(
 export async function updateGalleryImage(id: string, updates: Partial<GalleryImage>): Promise<void> {
   const docRef = doc(db, 'gallery', id);
   const nowStr = new Date().toISOString();
-  await updateDoc(docRef, {
-    ...updates,
-    updatedAt: nowStr
-  });
 
+  // 1. Primary update in Supabase database
   if (isSupabaseConfigured()) {
     try {
       const supaRow = mapGalleryToSupabaseRow({ ...updates, id } as any);
-      await (getSupabase().from('gallery') as any).update(supaRow).eq('id', id);
-    } catch (err) {
-      console.warn('[Supabase] updateGalleryImage sync error:', err);
+      const { error: supaErr } = await (getSupabase().from('gallery') as any).update(supaRow).eq('id', id);
+      if (supaErr) {
+        console.error('[Supabase] updateGalleryImage error:', supaErr);
+        throw new Error(supaErr.message || 'Failed to update gallery item in Supabase.');
+      }
+    } catch (err: any) {
+      console.error('[Supabase] updateGalleryImage exception:', err);
+      throw err;
     }
+  }
+
+  // 2. Best-effort Firestore sync (non-fatal)
+  try {
+    await updateDoc(docRef, {
+      ...updates,
+      updatedAt: nowStr
+    });
+  } catch (fsErr) {
+    console.warn('[Firestore] Update notice (non-fatal):', fsErr);
   }
 
   const current = getInitialGallery();
@@ -411,24 +451,22 @@ export async function toggleGalleryImageStatus(image: GalleryImage): Promise<'ac
 }
 
 /**
- * Delete a gallery image from Firestore and optionally Firebase Storage
+ * Delete a gallery image from Supabase (and optionally storage & Firestore)
  */
 export async function deleteGalleryImage(id: string, storagePath?: string): Promise<void> {
-  // 1. Delete Firestore document
-  const docRef = doc(db, 'gallery', id);
-  await deleteDoc(docRef);
-
+  // 1. Primary delete from Supabase database
   if (isSupabaseConfigured()) {
     try {
-      await (getSupabase().from('gallery') as any).delete().eq('id', id);
-    } catch (err) {
-      console.warn('[Supabase] deleteGalleryImage sync error:', err);
+      const { error: supaErr } = await (getSupabase().from('gallery') as any).delete().eq('id', id);
+      if (supaErr) {
+        console.error('[Supabase] deleteGalleryImage error:', supaErr);
+        throw new Error(supaErr.message || 'Failed to delete gallery item from Supabase.');
+      }
+    } catch (err: any) {
+      console.error('[Supabase] deleteGalleryImage exception:', err);
+      throw err;
     }
   }
-
-  // Proactively update cached gallery
-  const current = getInitialGallery();
-  setCachedData(CACHE_KEYS.GALLERY, current.filter(img => img.id !== id));
 
   // 2. Delete Supabase Storage file if uploaded
   if (storagePath && isSupabaseConfigured()) {
@@ -438,25 +476,27 @@ export async function deleteGalleryImage(id: string, storagePath?: string): Prom
       console.warn('[Supabase Storage] Storage file deletion notice:', e);
     }
   }
+
+  // 3. Best-effort Firestore delete (non-fatal)
+  try {
+    const docRef = doc(db, 'gallery', id);
+    await deleteDoc(docRef);
+  } catch (fsErr) {
+    console.warn('[Firestore] Delete notice (non-fatal):', fsErr);
+  }
+
+  // Proactively update cached gallery
+  const current = getInitialGallery();
+  setCachedData(CACHE_KEYS.GALLERY, current.filter(img => img.id !== id));
 }
 
 /**
  * Batch reorder gallery images
  */
 export async function reorderGalleryImages(orderedIds: string[]): Promise<void> {
-  const batch = writeBatch(db);
   const now = new Date().toISOString();
 
-  orderedIds.forEach((id, index) => {
-    const docRef = doc(db, 'gallery', id);
-    batch.update(docRef, {
-      displayOrder: index,
-      updatedAt: now
-    });
-  });
-
-  await batch.commit();
-
+  // 1. Primary reorder in Supabase database
   if (isSupabaseConfigured()) {
     try {
       const client = getSupabase();
@@ -468,7 +508,22 @@ export async function reorderGalleryImages(orderedIds: string[]): Promise<void> 
         )
       );
     } catch (err) {
-      console.warn('[Supabase] reorderGalleryImages sync error:', err);
+      console.warn('[Supabase] reorderGalleryImages error:', err);
     }
+  }
+
+  // 2. Best-effort Firestore batch commit (non-fatal)
+  try {
+    const batch = writeBatch(db);
+    orderedIds.forEach((id, index) => {
+      const docRef = doc(db, 'gallery', id);
+      batch.update(docRef, {
+        displayOrder: index,
+        updatedAt: now
+      });
+    });
+    await batch.commit();
+  } catch (fsErr) {
+    console.warn('[Firestore] Batch reorder notice (non-fatal):', fsErr);
   }
 }

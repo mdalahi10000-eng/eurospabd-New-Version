@@ -273,16 +273,34 @@ CREATE TABLE IF NOT EXISTS public.google_business_sync (
 -- Helper functions for RLS checks
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
+DECLARE
+  v_email text;
+  v_uid text;
 BEGIN
-  RETURN (
-    coalesce(auth.jwt() ->> 'email', '') = 'mdalahi10000@gmail.com'
-    OR EXISTS (
-      SELECT 1 FROM public.admins
-      WHERE email = coalesce(auth.jwt() ->> 'email', '')
-    )
-  );
+  v_email := lower(coalesce(auth.jwt() ->> 'email', ''));
+  v_uid := coalesce(auth.uid()::text, '');
+
+  IF v_email = 'mdalahi10000@gmail.com' THEN
+    RETURN true;
+  END IF;
+
+  IF v_email <> '' AND EXISTS (
+    SELECT 1 FROM public.admins
+    WHERE lower(email) = v_email
+  ) THEN
+    RETURN true;
+  END IF;
+
+  IF v_uid <> '' AND EXISTS (
+    SELECT 1 FROM public.admins
+    WHERE id = v_uid
+  ) THEN
+    RETURN true;
+  END IF;
+
+  RETURN false;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, auth;
 
 -- Enable RLS on all tables
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -420,25 +438,55 @@ CREATE POLICY "Admin full access to google business sync"
 -- Bucket: 'spa-assets' (public read, authenticated admin write)
 -- ==============================================================================
 
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('spa-assets', 'spa-assets', true)
-ON CONFLICT (id) DO NOTHING;
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+  'spa-assets',
+  'spa-assets',
+  true,
+  10485760, -- 10MB
+  ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml']
+)
+ON CONFLICT (id) DO UPDATE
+SET public = true,
+    file_size_limit = 10485760,
+    allowed_mime_types = ARRAY['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/svg+xml'];
 
--- Public can read images in spa-assets
-CREATE POLICY "Public Access for spa-assets bucket"
+-- Ensure RLS on storage.objects
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- 1. Public can read images in spa-assets
+CREATE POLICY "Public Read Access for spa-assets bucket"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'spa-assets');
 
--- Admins can upload and manage images in spa-assets
-CREATE POLICY "Admin Upload Access for spa-assets bucket"
+-- 2. Authenticated admins can upload images into spa-assets
+CREATE POLICY "Admin Insert Access for spa-assets bucket"
   ON storage.objects FOR INSERT
-  WITH CHECK (bucket_id = 'spa-assets' AND public.is_admin());
+  WITH CHECK (
+    bucket_id = 'spa-assets'
+    AND auth.role() = 'authenticated'
+    AND public.is_admin()
+  );
 
+-- 3. Authenticated admins can update/overwrite images in spa-assets
 CREATE POLICY "Admin Update Access for spa-assets bucket"
   ON storage.objects FOR UPDATE
-  USING (bucket_id = 'spa-assets' AND public.is_admin())
-  WITH CHECK (bucket_id = 'spa-assets' AND public.is_admin());
+  USING (
+    bucket_id = 'spa-assets'
+    AND auth.role() = 'authenticated'
+    AND public.is_admin()
+  )
+  WITH CHECK (
+    bucket_id = 'spa-assets'
+    AND auth.role() = 'authenticated'
+    AND public.is_admin()
+  );
 
+-- 4. Authenticated admins can delete images from spa-assets
 CREATE POLICY "Admin Delete Access for spa-assets bucket"
   ON storage.objects FOR DELETE
-  USING (bucket_id = 'spa-assets' AND public.is_admin());
+  USING (
+    bucket_id = 'spa-assets'
+    AND auth.role() = 'authenticated'
+    AND public.is_admin()
+  );
