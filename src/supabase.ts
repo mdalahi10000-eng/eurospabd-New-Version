@@ -124,48 +124,73 @@ export async function checkIsAdmin(user: SupabaseUser | null | { email?: string 
 }
 
 /**
- * Google Sign-In with OAuth
+ * Supabase Email + Password Authentication for Admin Portal
  */
-export async function loginWithGoogle(): Promise<{ error?: any }> {
+export async function loginWithPassword(email: string, password: string): Promise<{ data?: any; error?: any }> {
   try {
     if (!isSupabaseConfigured()) {
-      return { error: new Error('Supabase is not configured yet.') };
+      return { 
+        error: new Error('Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.') 
+      };
     }
     const client = getSupabase();
-    const isEmbedded = typeof window !== 'undefined' && window !== window.top;
+    const { data, error } = await client.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error) return { error };
+    return { data };
+  } catch (error: any) {
+    console.error('[Supabase] Email sign-in error:', error);
+    return { error };
+  }
+}
 
-    if (isEmbedded) {
-      // In an iframe (such as the AI Studio preview environment),
-      // accounts.google.com blocks embedding via X-Frame-Options: DENY.
-      // Obtain the authorize URL and navigate window.top or open in popup.
-      const { data, error } = await client.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + '/admin',
-          skipBrowserRedirect: true,
-        },
-      });
-      if (error) throw error;
-      if (data?.url) {
-        try {
-          window.top!.location.href = data.url;
-        } catch (_) {
-          window.open(data.url, '_blank');
-        }
-      }
-      return {};
+export async function signUpWithPassword(
+  email: string,
+  password: string,
+  fullName?: string
+): Promise<{ data?: any; error?: any }> {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { 
+        error: new Error('Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.') 
+      };
     }
-
-    const { error } = await client.auth.signInWithOAuth({
-      provider: 'google',
+    const client = getSupabase();
+    const { data, error } = await client.auth.signUp({
+      email: email.trim(),
+      password,
       options: {
-        redirectTo: window.location.origin + '/admin',
+        data: {
+          full_name: fullName?.trim() || undefined,
+        },
       },
     });
-    if (error) throw error;
-    return {};
+    if (error) return { error };
+    return { data };
   } catch (error: any) {
-    console.error('[Supabase] Google Login error:', error);
+    console.error('[Supabase] Sign-up error:', error);
+    return { error };
+  }
+}
+
+export async function resetPasswordForEmail(email: string): Promise<{ data?: any; error?: any }> {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { 
+        error: new Error('Supabase is not configured yet. Please configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.') 
+      };
+    }
+    const client = getSupabase();
+    const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/admin` : undefined;
+    const { data, error } = await client.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo,
+    });
+    if (error) return { error };
+    return { data };
+  } catch (error: any) {
+    console.error('[Supabase] Reset password error:', error);
     return { error };
   }
 }
@@ -206,7 +231,7 @@ export function formatSupabaseUser(user: any): AdminAuthUser {
       null,
     providerData: [
       {
-        providerId: user.app_metadata?.provider || 'google',
+        providerId: user.app_metadata?.provider || 'email',
       },
     ],
   };
