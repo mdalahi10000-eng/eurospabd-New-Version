@@ -1,11 +1,10 @@
-import { User } from 'firebase/auth';
 import { ShieldX, LogOut, ArrowLeft } from 'lucide-react';
-import { logoutUser } from '../../firebase';
+import { logoutUser, AdminAuthUser } from '../../supabase';
 import { navigate } from '../../router';
 import { SPA_INFO } from '../../data/spaData';
 
 interface AdminAccessDeniedPageProps {
-  currentUser: User;
+  currentUser: AdminAuthUser;
   onLoggedOut: () => void;
 }
 

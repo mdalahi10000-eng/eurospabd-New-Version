@@ -1,4 +1,4 @@
-import { User } from 'firebase/auth';
+import { AdminAuthUser } from '../../supabase';
 import { 
   LayoutDashboard, 
   Home, 
@@ -38,7 +38,7 @@ export type AdminSection =
 interface AdminSidebarProps {
   currentSection: AdminSection;
   onSelectSection: (section: AdminSection) => void;
-  currentUser: User | null;
+  currentUser: AdminAuthUser | null;
   onLogout: () => void;
   isOpenMobile: boolean;
   onCloseMobile: () => void;

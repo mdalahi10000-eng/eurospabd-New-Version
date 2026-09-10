@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
 import { 
   Menu, 
   Bell, 
@@ -21,7 +20,14 @@ import {
   LogIn,
   AlertCircle
 } from 'lucide-react';
-import { auth, checkIsAdmin, logoutUser, recoverFirestoreNetwork, getInitialAuthState } from '../../firebase';
+import { 
+  getSupabase, 
+  checkIsAdmin, 
+  logoutUser, 
+  formatSupabaseUser, 
+  AdminAuthUser 
+} from '../../supabase';
+import { recoverFirestoreNetwork } from '../../firebase';
 import { AdminLoginPage } from './AdminLoginPage';
 import { AdminAccessDeniedPage } from './AdminAccessDeniedPage';
 import { AdminSidebar, AdminSection } from './AdminSidebar';
@@ -57,7 +63,7 @@ const SECTION_METADATA: Record<AdminSection, { title: string; description: strin
 };
 
 export function AdminLayout() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<AdminAuthUser | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [authChecking, setAuthChecking] = useState<boolean>(true);
   const [startupPhase, setStartupPhase] = useState<'checking' | 'slow' | 'timed_out'>('checking');
@@ -84,59 +90,74 @@ export function AdminLayout() {
         console.warn('[AdminLayout] Auth verification exceeded 7.5s. Falling back to login screen.');
         setStartupPhase('timed_out');
         setStartupNotice('Session restoration took longer than expected after an idle period. You can sign in below or retry connection.');
-        recoverFirestoreNetwork().catch(() => {});
         setAuthChecking(false);
       }
     }, 7500);
 
-    // Immediate fast-path check if currentUser is already in memory
-    if (auth.currentUser) {
-      checkIsAdmin(auth.currentUser).then((adminCheck) => {
+    const client = getSupabase();
+
+    const verifyUser = async (user: any) => {
+      if (isCancelled) return;
+      if (!user) {
+        setCurrentUser(null);
+        setIsAdmin(null);
+        setAuthChecking(false);
+        clearTimeout(slowTimer);
+        clearTimeout(timeoutTimer);
+        return;
+      }
+
+      const formatted = formatSupabaseUser(user);
+      setCurrentUser(formatted);
+
+      try {
+        const adminCheck = await checkIsAdmin(user);
         if (!isCancelled) {
-          setCurrentUser(auth.currentUser);
           setIsAdmin(adminCheck);
           setAuthChecking(false);
           clearTimeout(slowTimer);
           clearTimeout(timeoutTimer);
         }
-      }).catch(() => {
+      } catch (e) {
+        console.error('[AdminLayout] Error verifying admin authorization in Supabase:', e);
         if (!isCancelled) {
           setIsAdmin(false);
           setAuthChecking(false);
           clearTimeout(slowTimer);
           clearTimeout(timeoutTimer);
         }
-      });
-    }
+      }
+    };
 
-    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
+    // 1. Immediate session check from Supabase local store
+    client.auth.getSession().then(({ data: { session } }) => {
+      if (!isCancelled && session?.user) {
+        verifyUser(session.user);
+      } else if (!isCancelled && !session) {
+        setAuthChecking(false);
+        clearTimeout(slowTimer);
+        clearTimeout(timeoutTimer);
+      }
+    }).catch((err) => {
+      console.warn('[AdminLayout] getSession error:', err);
+      if (!isCancelled) {
+        setAuthChecking(false);
+        clearTimeout(slowTimer);
+        clearTimeout(timeoutTimer);
+      }
+    });
+
+    // 2. Subscribe to Supabase auth state change events (OAuth callback, refresh, signout)
+    const { data: { subscription } } = client.auth.onAuthStateChange(async (_event, session) => {
       if (isCancelled) return;
-      setCurrentUser(user);
-      if (user) {
-        try {
-          const adminCheck = await checkIsAdmin(user);
-          if (!isCancelled) {
-            setIsAdmin(adminCheck);
-            setAuthChecking(false);
-            clearTimeout(slowTimer);
-            clearTimeout(timeoutTimer);
-          }
-        } catch (e) {
-          console.error('Error verifying admin authorization:', e);
-          if (!isCancelled) {
-            setIsAdmin(false);
-            setAuthChecking(false);
-            clearTimeout(slowTimer);
-            clearTimeout(timeoutTimer);
-          }
-        }
+      if (session?.user) {
+        await verifyUser(session.user);
       } else {
-        if (!isCancelled) {
-          setIsAdmin(null);
-          setAuthChecking(false);
-          clearTimeout(slowTimer);
-          clearTimeout(timeoutTimer);
-        }
+        setCurrentUser(null);
+        setIsAdmin(null);
+        setAuthChecking(false);
+        clearTimeout(slowTimer);
+        clearTimeout(timeoutTimer);
       }
     });
 
@@ -144,7 +165,7 @@ export function AdminLayout() {
       isCancelled = true;
       clearTimeout(slowTimer);
       clearTimeout(timeoutTimer);
-      unsubscribeAuth();
+      subscription.unsubscribe();
     };
   }, [retryTrigger]);
 

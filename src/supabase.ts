@@ -129,9 +129,34 @@ export async function checkIsAdmin(user: SupabaseUser | null | { email?: string 
 export async function loginWithGoogle(): Promise<{ error?: any }> {
   try {
     if (!isSupabaseConfigured()) {
-      return { error: new Error('Supabase is not configured yet. Falling back to Firebase Auth.') };
+      return { error: new Error('Supabase is not configured yet.') };
     }
-    const { error } = await getSupabase().auth.signInWithOAuth({
+    const client = getSupabase();
+    const isEmbedded = typeof window !== 'undefined' && window !== window.top;
+
+    if (isEmbedded) {
+      // In an iframe (such as the AI Studio preview environment),
+      // accounts.google.com blocks embedding via X-Frame-Options: DENY.
+      // Obtain the authorize URL and navigate window.top or open in popup.
+      const { data, error } = await client.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/admin',
+          skipBrowserRedirect: true,
+        },
+      });
+      if (error) throw error;
+      if (data?.url) {
+        try {
+          window.top!.location.href = data.url;
+        } catch (_) {
+          window.open(data.url, '_blank');
+        }
+      }
+      return {};
+    }
+
+    const { error } = await client.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: window.location.origin + '/admin',
@@ -143,6 +168,48 @@ export async function loginWithGoogle(): Promise<{ error?: any }> {
     console.error('[Supabase] Google Login error:', error);
     return { error };
   }
+}
+
+export interface AdminAuthUser {
+  uid: string;
+  id: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  providerData: Array<{ providerId: string }>;
+}
+
+export function formatSupabaseUser(user: any): AdminAuthUser {
+  if (!user) {
+    return {
+      uid: '',
+      id: '',
+      email: null,
+      displayName: null,
+      photoURL: null,
+      providerData: [],
+    };
+  }
+  return {
+    uid: user.id || '',
+    id: user.id || '',
+    email: user.email || null,
+    displayName:
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.user_metadata?.display_name ||
+      (user.email ? user.email.split('@')[0] : 'Administrator'),
+    photoURL:
+      user.user_metadata?.avatar_url ||
+      user.user_metadata?.picture ||
+      user.user_metadata?.photo_url ||
+      null,
+    providerData: [
+      {
+        providerId: user.app_metadata?.provider || 'google',
+      },
+    ],
+  };
 }
 
 /**

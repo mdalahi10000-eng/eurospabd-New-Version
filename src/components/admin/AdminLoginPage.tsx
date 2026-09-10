@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   ShieldAlert, 
@@ -15,7 +15,7 @@ import {
   loginWithGoogle, 
   checkIsAdmin, 
   logoutUser 
-} from '../../firebase';
+} from '../../supabase';
 import { navigate } from '../../router';
 import { SPA_INFO } from '../../data/spaData';
 import euroSpaLogo from '../../assets/Untitled design (4).jpg';
@@ -30,42 +30,37 @@ export function AdminLoginPage({ onSuccess, startupNotice, onRetryConnection }: 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Check URL parameters for OAuth redirect notices or errors
+  useEffect(() => {
+    try {
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const errorMsg =
+        searchParams.get('error_description') ||
+        searchParams.get('error') ||
+        hashParams.get('error_description') ||
+        hashParams.get('error');
+
+      if (errorMsg) {
+        const decoded = decodeURIComponent(errorMsg.replace(/\+/g, ' '));
+        setErrorMessage(`Authentication notice: ${decoded}`);
+      }
+    } catch (_) {}
+  }, []);
+
   const handleGoogleSignIn = async () => {
     setLoading(true);
     setErrorMessage(null);
 
     try {
-      const user = await loginWithGoogle();
-      if (!user) {
-        // User dismissed the popup
-        setLoading(false);
-        return;
+      const { error } = await loginWithGoogle();
+      if (error) {
+        throw error;
       }
-
-      const isAdmin = await checkIsAdmin(user);
-      if (!isAdmin) {
-        await logoutUser();
-        setErrorMessage(
-          `Access Denied: The Google account (${user.email || 'provided'}) is not registered in the authorized /admins directory. Only authorized administrator accounts are permitted.`
-        );
-      } else if (onSuccess) {
-        onSuccess();
-      }
+      // Note: Google OAuth triggers redirection to the Google OAuth consent screen.
     } catch (err: any) {
       console.error('Google Admin Sign-in error:', err);
-      const code = err?.code;
-      if (code === 'auth/popup-closed-by-user' || code === 'auth/cancelled-popup-request') {
-        // Handled silently
-      } else if (code === 'auth/unauthorized-domain') {
-        setErrorMessage(
-          'Firebase Authentication returned "auth/unauthorized-domain". If testing on an unauthorized custom domain or preview URL, ensure you authenticate via an authorized origin.'
-        );
-      } else if (code === 'auth/network-request-failed') {
-        setErrorMessage('Network error while connecting to Firebase Authentication. Please check your internet connection.');
-      } else {
-        setErrorMessage(err?.message || 'Authentication failed. Please verify your connection and try again.');
-      }
-    } finally {
+      setErrorMessage(err?.message || 'Authentication failed. Please verify your connection and try again.');
       setLoading(false);
     }
   };
