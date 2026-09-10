@@ -11,7 +11,6 @@ interface ReviewsModalProps {
   onClose: () => void;
   currentUser: User | null;
   communityReviews?: StoredReview[];
-  firebaseReviews?: StoredReview[];
   syncedReviews?: ReviewItem[];
   syncedRating?: number;
   syncedCount?: number;
@@ -22,14 +21,13 @@ export function ReviewsModal({
   isOpen,
   onClose,
   currentUser,
-  communityReviews,
-  firebaseReviews = [],
+  communityReviews = [],
   syncedReviews,
   syncedRating,
   syncedCount,
   initialWriteMode = false
 }: ReviewsModalProps) {
-  const activeReviews = communityReviews || firebaseReviews;
+  const activeReviews = communityReviews;
   const [visibleCount, setVisibleCount] = useState(12);
   const [showWriteForm, setShowWriteForm] = useState(initialWriteMode);
   const [rating, setRating] = useState(5);

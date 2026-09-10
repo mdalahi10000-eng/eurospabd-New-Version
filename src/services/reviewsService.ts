@@ -1,4 +1,4 @@
-import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from '../supabase';
+import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable, requireAdmin } from '../supabase';
 import { INITIAL_REVIEWS } from '../data/spaData';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
@@ -57,7 +57,7 @@ export async function seedInitialReviewsIfEmpty(): Promise<AdminReview[]> {
       comment: rev.reviewText || '',
       service_tag: rev.serviceUsed || 'Signature Therapy',
       status: 'approved',
-      date_string: rev.date || 'Recent Visit',
+      date_str: rev.date || 'Recent Visit',
       verified: rev.verified ?? true,
       admin_response: '',
       created_at: new Date().toISOString(),
@@ -86,15 +86,15 @@ export async function fetchAdminReviews(): Promise<AdminReview[]> {
       const list: AdminReview[] = data.map((d: any) => ({
         id: d.id,
         userId: d.user_id || '',
-        userName: d.user_name || 'Valued Guest',
-        userPhoto: d.user_photo || '',
+        userName: d.user_name || d.name || 'Valued Guest',
+        userPhoto: d.user_photo || d.avatar || 'https://lh3.googleusercontent.com/a/default-user',
         rating: Number(d.rating) || 5,
-        comment: d.comment || '',
-        serviceTag: d.service_tag || '',
+        comment: d.comment || d.review_text || '',
+        serviceTag: d.service_tag || d.service_used || 'Signature Therapy',
         status: (d.status as ReviewStatus) || 'approved',
         adminResponse: d.admin_response || '',
         adminRespondedAt: d.admin_responded_at,
-        dateString: d.date_string || '',
+        dateString: d.date_str || d.date_string || d.date || 'Recent Visit',
         verified: d.verified !== false,
         createdAt: d.created_at,
         updatedAt: d.updated_at
@@ -145,6 +145,8 @@ export function subscribeToAdminReviews(
 }
 
 export async function updateReviewStatus(id: string, status: ReviewStatus): Promise<void> {
+  await requireAdmin();
+
   const { error } = await (getSupabase().from('reviews') as any).update({
     status,
     updated_at: new Date().toISOString()
@@ -161,20 +163,23 @@ export async function updateReviewStatus(id: string, status: ReviewStatus): Prom
 }
 
 export async function updateReview(id: string, updates: Partial<AdminReview>): Promise<void> {
-  const supaUpdate: any = { updated_at: new Date().toISOString() };
-  if (updates.userName !== undefined) supaUpdate.user_name = updates.userName;
-  if (updates.comment !== undefined) supaUpdate.comment = updates.comment;
-  if (updates.rating !== undefined) supaUpdate.rating = updates.rating;
+  await requireAdmin();
+
+  const supaUpdate: Record<string, any> = { updated_at: new Date().toISOString() };
+  if (updates.userName !== undefined) supaUpdate.user_name = updates.userName.trim();
+  if (updates.comment !== undefined) supaUpdate.comment = updates.comment.trim();
+  if (updates.rating !== undefined) supaUpdate.rating = Number(updates.rating) || 5;
   if (updates.status !== undefined) supaUpdate.status = updates.status;
-  if (updates.serviceTag !== undefined) supaUpdate.service_tag = updates.serviceTag;
-  if (updates.adminResponse !== undefined) supaUpdate.admin_response = updates.adminResponse;
-  if (updates.dateString !== undefined) supaUpdate.date_string = updates.dateString;
+  if (updates.serviceTag !== undefined) supaUpdate.service_tag = updates.serviceTag.trim();
+  if (updates.userPhoto !== undefined) supaUpdate.user_photo = updates.userPhoto.trim();
+  if (updates.adminResponse !== undefined) supaUpdate.admin_response = updates.adminResponse.trim();
+  if (updates.dateString !== undefined) supaUpdate.date_str = updates.dateString;
   if (updates.verified !== undefined) supaUpdate.verified = updates.verified;
 
   const { error } = await (getSupabase().from('reviews') as any).update(supaUpdate).eq('id', id);
   if (error) {
     console.error('[Supabase] updateReview error:', error);
-    throw new Error(error.message || 'Failed to update review.');
+    throw new Error(error.message || 'Failed to update review in Supabase.');
   }
 
   const current = getInitialAdminReviews();
@@ -183,6 +188,8 @@ export async function updateReview(id: string, updates: Partial<AdminReview>): P
 }
 
 export async function createAdminReview(data: Omit<AdminReview, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  await requireAdmin();
+
   const id = `rev_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const now = new Date().toISOString();
 
@@ -195,7 +202,8 @@ export async function createAdminReview(data: Omit<AdminReview, 'id' | 'createdA
     service_tag: data.serviceTag?.trim() || 'Signature Therapy',
     user_photo: data.userPhoto?.trim() || 'https://lh3.googleusercontent.com/a/default-user',
     verified: data.verified ?? true,
-    date_string: data.dateString || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    admin_response: data.adminResponse?.trim() || '',
+    date_str: data.dateString || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     created_at: now,
     updated_at: now
   };
@@ -216,7 +224,8 @@ export async function createAdminReview(data: Omit<AdminReview, 'id' | 'createdA
     serviceTag: payload.service_tag,
     status: payload.status as ReviewStatus,
     verified: payload.verified,
-    dateString: payload.date_string,
+    adminResponse: payload.admin_response,
+    dateString: payload.date_str,
     createdAt: now,
     updatedAt: now
   }, ...current]);
@@ -225,16 +234,17 @@ export async function createAdminReview(data: Omit<AdminReview, 'id' | 'createdA
 }
 
 export async function saveAdminResponse(id: string, adminResponse: string): Promise<void> {
+  await requireAdmin();
+
   const now = new Date().toISOString();
   const { error } = await (getSupabase().from('reviews') as any).update({
     admin_response: adminResponse.trim(),
-    admin_responded_at: now,
     updated_at: now
   }).eq('id', id);
 
   if (error) {
     console.error('[Supabase] saveAdminResponse error:', error);
-    throw new Error(error.message || 'Failed to save admin response.');
+    throw new Error(error.message || 'Failed to save admin response in Supabase.');
   }
 
   const current = getInitialAdminReviews();
@@ -243,13 +253,16 @@ export async function saveAdminResponse(id: string, adminResponse: string): Prom
 }
 
 export async function deleteReview(id: string): Promise<void> {
+  await requireAdmin();
+
   const { error } = await (getSupabase().from('reviews') as any).delete().eq('id', id);
   if (error) {
     console.error('[Supabase] deleteReview error:', error);
-    throw new Error(error.message || 'Failed to delete review.');
+    throw new Error(error.message || 'Failed to delete review in Supabase.');
   }
 
   const current = getInitialAdminReviews();
   const updated = current.filter(r => r.id !== id);
   setCachedData(CACHE_KEYS.REVIEWS, updated);
 }
+

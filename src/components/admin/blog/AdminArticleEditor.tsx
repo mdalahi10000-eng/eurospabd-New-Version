@@ -169,7 +169,7 @@ export function AdminArticleEditor({
     }, 0);
   };
 
-  // Handle Firebase Storage Image Upload
+  // Handle Supabase Storage Image Upload
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -193,10 +193,10 @@ export function AdminArticleEditor({
       if (!imageAlt) {
         setImageAlt(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
       }
-      setFeedback({ type: 'success', message: 'Featured image uploaded securely to Firebase Storage!' });
+      setFeedback({ type: 'success', message: 'Featured image uploaded securely to Supabase Storage!' });
     } catch (err: any) {
       console.error('Storage upload failed:', err);
-      setImageError(err.message || 'Could not upload image to Firebase Storage.');
+      setImageError(err.message || 'Could not upload image to Supabase Storage.');
     } finally {
       setUploadingImage(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -795,11 +795,11 @@ Call or visit Euro Spa Center in Banani to book your personalized session!"
             </div>
           </div>
 
-          {/* Featured Image & Firebase Storage Upload */}
+          {/* Featured Image & Supabase Storage Upload */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider border-b border-slate-100 pb-2 flex items-center justify-between">
               <span>Featured Image</span>
-              <span className="text-[10px] font-normal text-slate-400">Firebase Storage</span>
+              <span className="text-[10px] font-normal text-slate-400">Supabase Storage</span>
             </h3>
 
             {/* Image Preview */}
@@ -819,7 +819,7 @@ Call or visit Euro Spa Center in Banani to book your personalized session!"
               {uploadingImage && (
                 <div className="absolute inset-0 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white gap-2">
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  <span className="text-xs font-semibold">Uploading to Firebase ({uploadProgress}%)</span>
+                  <span className="text-xs font-semibold">Uploading to Supabase ({uploadProgress}%)</span>
                 </div>
               )}
             </div>

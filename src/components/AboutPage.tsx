@@ -66,7 +66,7 @@ export function AboutPage({
   const address = businessInfo ? `${businessInfo.addressLine}, ${businessInfo.area}, ${businessInfo.city}` : SPA_INFO.fullAddress;
   const displayHours = businessInfo?.displayHours || '10:00 AM – 10:00 PM Daily';
 
-  // Real-time synchronization with Firestore siteSettings/about
+  // Real-time synchronization with Supabase siteSettings/about
   useEffect(() => {
     window.scrollTo(0, 0);
 

@@ -189,7 +189,7 @@ export function AdminGallerySection({ currentUser }: AdminGallerySectionProps) {
     // Update local state immediately for snappy UI
     setImages(reordered);
 
-    // Persist to Firestore
+    // Persist to Supabase
     setIsReordering(true);
     try {
       const ids = reordered.map(i => i.id);

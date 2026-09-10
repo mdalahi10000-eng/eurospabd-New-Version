@@ -62,7 +62,7 @@ export default function App() {
   const [homepageContent, setHomepageContent] = useState<HomepageContent>(() => getInitialHomepageContent());
   const [aboutContent, setAboutContent] = useState<AboutContent>(() => getInitialAboutContent());
 
-  // Subscribe to real-time homepage and about CMS content from Firestore
+  // Subscribe to real-time homepage and about CMS content from Supabase
   useEffect(() => {
     const unsubHome = subscribeToHomepageContent((data) => {
       setHomepageContent(data);
@@ -110,7 +110,7 @@ export default function App() {
     return () => window.removeEventListener('eurospa_cache_updated', handleCacheUpdated);
   }, []);
 
-  // Real-time listener for public active services from Firestore
+  // Real-time listener for public active services from Supabase
   useEffect(() => {
     const unsubServices = subscribeToPublicServices((items) => {
       if (items && items.length > 0) {
@@ -124,7 +124,7 @@ export default function App() {
     return () => unsubServices();
   }, []);
 
-  // Real-time listener for public active gallery photos from Firestore
+  // Real-time listener for public active gallery photos from Supabase
   useEffect(() => {
     const unsubGallery = subscribeToPublicGallery((items) => {
       if (items && items.length > 0) {
@@ -137,7 +137,7 @@ export default function App() {
     return () => unsubGallery();
   }, []);
 
- // Fetch live canonical business info and active service areas from Firestore
+ // Fetch live canonical business info and active service areas from Supabase
 useEffect(() => {
   fetchPublicServiceAreas()
     .then(areas => {

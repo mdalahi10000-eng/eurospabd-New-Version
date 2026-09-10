@@ -90,7 +90,7 @@ export function AdminFaqSection({ currentUser }: AdminFaqSectionProps) {
     try {
       const seeded = await seedInitialFAQsIfEmpty();
       if (seeded) {
-        showToast('Initial FAQs successfully seeded into Firestore!');
+        showToast('Initial FAQs successfully seeded into Supabase!');
       } else {
         showToast('FAQs already exist in database.');
       }
@@ -262,7 +262,7 @@ export function AdminFaqSection({ currentUser }: AdminFaqSectionProps) {
               FAQ Management CMS
             </h2>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-              Live Firestore Sync
+              Live Supabase Sync
             </span>
           </div>
           <p className="text-xs text-slate-500">
@@ -351,7 +351,7 @@ export function AdminFaqSection({ currentUser }: AdminFaqSectionProps) {
       {loading ? (
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-3">
           <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-slate-500 font-medium">Loading FAQs from Firestore...</p>
+          <p className="text-xs text-slate-500 font-medium">Loading FAQs from Supabase...</p>
         </div>
       ) : filteredFaqs.length === 0 ? (
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-3">

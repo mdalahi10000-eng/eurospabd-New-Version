@@ -201,7 +201,7 @@ export function AdminDashboardOverview({ onNavigateSection }: AdminDashboardOver
 
       {/* Middle Split: System Status & Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Firebase Connected Environment Card */}
+        {/* Supabase Connected Environment Card */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2">
@@ -236,7 +236,7 @@ export function AdminDashboardOverview({ onNavigateSection }: AdminDashboardOver
               </span>
             </div>
             <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-              <span className="text-slate-500">Firebase Storage</span>
+              <span className="text-slate-500">Supabase Storage</span>
               <span className="text-emerald-700 font-semibold flex items-center gap-1">
                 <CheckCircle2 className="w-3.5 h-3.5" />
                 Ready for CMS Media

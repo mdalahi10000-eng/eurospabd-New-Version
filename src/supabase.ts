@@ -1,7 +1,7 @@
 /**
  * Euro Spa & Salon Dhaka - Supabase Client Module
  * Provides unified client initialization, authentication, storage, and real-time helpers.
- * Fully compatible with the fallback architecture so Firebase remains 100% functional.
+ * Exclusive production backend for Euro Spa & Salon Dhaka.
  */
 import { createClient, SupabaseClient, User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { Database } from '../supabase/types';
@@ -121,6 +121,45 @@ export async function checkIsAdmin(user: SupabaseUser | null | { email?: string 
     console.warn('[Supabase] checkIsAdmin error:', err);
     return false;
   }
+}
+
+/**
+ * Retrieves current authenticated user in Supabase
+ */
+export async function getCurrentSupabaseUser(): Promise<AdminAuthUser | null> {
+  if (!isSupabaseConfigured()) return null;
+  try {
+    const { data: { user } } = await getSupabase().auth.getUser();
+    return user ? formatSupabaseUser(user) : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Verifies that the current user has administrator authorization
+ */
+export async function requireAdmin(): Promise<AdminAuthUser> {
+  if (!isSupabaseConfigured()) {
+    // Return fallback admin in offline/unconfigured mode
+    return {
+      id: 'admin_root',
+      uid: 'admin_root',
+      email: 'mdalahi10000@gmail.com',
+      displayName: 'Euro Spa Administrator',
+      photoURL: 'https://lh3.googleusercontent.com/a/default-user',
+      providerData: [{ providerId: 'password' }]
+    };
+  }
+  const { data: { user } } = await getSupabase().auth.getUser();
+  if (!user) {
+    throw new Error('Authentication required. Please sign in as an administrator.');
+  }
+  const isAdmin = await checkIsAdmin(user);
+  if (!isAdmin) {
+    throw new Error('Access Denied: Only authorized administrators can perform this action.');
+  }
+  return formatSupabaseUser(user);
 }
 
 /**
@@ -434,7 +473,9 @@ export function subscribeToReviews(callback: (reviews: StoredReview[]) => void):
         .order('created_at', { ascending: false });
 
       if (!error && data) {
-        const list: StoredReview[] = data.map((r: any) => ({
+        const list: StoredReview[] = data
+          .filter((r: any) => r.status !== 'hidden')
+          .map((r: any) => ({
           id: r.id,
           userId: r.user_id,
           userName: r.user_name || r.name,

@@ -172,7 +172,7 @@ export function AdminServiceEditor({
       if (!imageAlt) {
         setImageAlt(`${name || 'Service'} session at Euro Spa Center Banani`);
       }
-      setFeedback({ type: 'success', message: 'Service image uploaded to Firebase Storage!' });
+      setFeedback({ type: 'success', message: 'Service image uploaded to Supabase Storage!' });
     } catch (err: any) {
       console.error('Service image upload error:', err);
       setImageError(err.message || 'Failed to upload image.');
@@ -821,14 +821,14 @@ export function AdminServiceEditor({
             </div>
           </div>
 
-          {/* Featured Image & Firebase Storage */}
+          {/* Featured Image & Supabase Storage */}
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-2xs space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
                 <ImageIcon className="w-4 h-4 text-blue-600" />
                 <span>Featured Image</span>
               </h3>
-              <span className="text-[10px] text-slate-400">Firebase Storage</span>
+              <span className="text-[10px] text-slate-400">Supabase Storage</span>
             </div>
 
             {/* Image Preview */}

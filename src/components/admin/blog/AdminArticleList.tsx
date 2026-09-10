@@ -197,7 +197,7 @@ export function AdminArticleList({
       {loading ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 flex flex-col items-center justify-center gap-3 text-slate-400 shadow-2xs">
           <div className="w-7 h-7 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-          <p className="text-xs font-medium">Loading articles from Firestore database...</p>
+          <p className="text-xs font-medium">Loading articles from Supabase database...</p>
         </div>
       ) : filteredArticles.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-2xs space-y-4 max-w-lg mx-auto">
@@ -389,7 +389,7 @@ export function AdminArticleList({
                 Delete Article?
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Are you sure you want to delete <strong className="text-slate-800">"{articleToDelete.title}"</strong>? This will permanently remove the article from the Firestore database and it will no longer be visible on the public website.
+                Are you sure you want to delete <strong className="text-slate-800">"{articleToDelete.title}"</strong>? This will permanently remove the article from the Supabase database and it will no longer be visible on the public website.
               </p>
             </div>
 

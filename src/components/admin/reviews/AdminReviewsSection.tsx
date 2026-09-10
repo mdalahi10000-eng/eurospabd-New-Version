@@ -81,9 +81,9 @@ export function AdminReviewsSection({ currentUser }: AdminReviewsSectionProps) {
       const seeded = await seedInitialReviewsIfEmpty();
       if (seeded.length > 0) {
         setReviews(seeded);
-        showNotification(`Successfully loaded ${seeded.length} reviews from Firestore`);
+        showNotification(`Successfully loaded ${seeded.length} reviews from Supabase`);
       } else {
-        showNotification('Reviews are already up to date in Firestore');
+        showNotification('Reviews are already up to date in Supabase');
       }
     } catch (err) {
       console.error('Manual seed error:', err);
@@ -201,9 +201,9 @@ export function AdminReviewsSection({ currentUser }: AdminReviewsSectionProps) {
       }
       setEditingReview(null);
       setIsCreatingNew(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving review:', err);
-      alert('Failed to save review changes.');
+      alert(err?.message || 'Failed to save review changes.');
     } finally {
       setIsSavingEdit(false);
     }
@@ -283,10 +283,10 @@ export function AdminReviewsSection({ currentUser }: AdminReviewsSectionProps) {
             onClick={handleManualSync}
             disabled={isSeeding}
             className="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            title="Reload from Firestore / Seed reviews if missing"
+            title="Reload from Supabase / Seed reviews if missing"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSeeding ? 'animate-spin' : ''}`} />
-            <span>Sync Firestore</span>
+            <span>Sync Supabase</span>
           </button>
 
           <button
@@ -304,7 +304,7 @@ export function AdminReviewsSection({ currentUser }: AdminReviewsSectionProps) {
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Reviews</div>
           <div className="text-2xl font-extrabold text-slate-900 mt-1">{stats.total}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Synced in Firestore</div>
+          <div className="text-[11px] text-slate-400 mt-0.5">Synced in Supabase</div>
         </div>
 
         <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-2xs">
@@ -383,7 +383,7 @@ export function AdminReviewsSection({ currentUser }: AdminReviewsSectionProps) {
       {loading ? (
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-3">
           <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-slate-500 font-medium">Loading reviews from Firestore...</p>
+          <p className="text-xs text-slate-500 font-medium">Loading reviews from Supabase...</p>
         </div>
       ) : filteredReviews.length === 0 ? (
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-3">
@@ -394,14 +394,14 @@ export function AdminReviewsSection({ currentUser }: AdminReviewsSectionProps) {
           <p className="text-xs text-slate-500 max-w-sm mx-auto">
             {searchQuery || statusFilter !== 'all' || ratingFilter !== 'all'
               ? 'Try clearing or changing your search filters.'
-              : 'Click "Sync Firestore" above or add a testimonial.'}
+              : 'Click "Sync Supabase" above or add a testimonial.'}
           </p>
           <button
             onClick={handleManualSync}
             className="mt-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-2 cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
-            <span>Load Default Reviews into Firestore</span>
+            <span>Load Default Reviews into Supabase</span>
           </button>
         </div>
       ) : (
@@ -609,7 +609,7 @@ export function AdminReviewsSection({ currentUser }: AdminReviewsSectionProps) {
                     {isCreatingNew ? 'Add Client Testimonial' : 'Edit Review'}
                   </h3>
                   <p className="text-xs text-slate-500">
-                    {isCreatingNew ? 'Create a verified testimonial in Firestore' : `Editing feedback for ${editingReview?.userName}`}
+                    {isCreatingNew ? 'Create a verified client testimonial' : `Editing feedback for ${editingReview?.userName}`}
                   </p>
                 </div>
               </div>

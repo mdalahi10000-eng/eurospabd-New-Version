@@ -62,9 +62,9 @@ export function AdminHomepageSection({ currentUser }: AdminHomepageSectionProps)
       await updateHomepageContent(content, currentUser?.email || 'admin');
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 4000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving homepage content:', err);
-      alert('Failed to save homepage content to Firestore. Please check permissions.');
+      alert(err?.message || 'Failed to save homepage content to Supabase. Please check permissions.');
     } finally {
       setSaving(false);
     }
@@ -80,7 +80,7 @@ export function AdminHomepageSection({ currentUser }: AdminHomepageSectionProps)
     return (
       <div className="p-12 text-center space-y-3">
         <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-xs text-slate-500 font-medium">Loading Homepage configuration from Firestore...</p>
+        <p className="text-xs text-slate-500 font-medium">Loading Homepage configuration from Supabase...</p>
       </div>
     );
   }
@@ -635,7 +635,7 @@ export function AdminHomepageSection({ currentUser }: AdminHomepageSectionProps)
             {saving ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Saving to Firestore...</span>
+                <span>Saving to Supabase...</span>
               </>
             ) : (
               <>

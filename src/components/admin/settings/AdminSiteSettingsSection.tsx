@@ -90,9 +90,9 @@ export function AdminSiteSettingsSection({ currentUser, initialTab = 'contact' }
       });
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 4000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error updating site settings:', err);
-      alert('Failed to save settings to Firestore. Please verify admin permissions.');
+      alert(err?.message || 'Failed to save settings to Supabase. Please verify admin permissions.');
     } finally {
       setSaving(false);
     }
@@ -128,7 +128,7 @@ export function AdminSiteSettingsSection({ currentUser, initialTab = 'contact' }
     return (
       <div className="p-12 text-center max-w-5xl mx-auto space-y-3">
         <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-xs text-slate-500 font-medium">Loading centralized site settings from Firestore...</p>
+        <p className="text-xs text-slate-500 font-medium">Loading centralized site settings from Supabase...</p>
       </div>
     );
   }
@@ -165,7 +165,7 @@ export function AdminSiteSettingsSection({ currentUser, initialTab = 'contact' }
             onClick={loadSettings}
             disabled={saving}
             className="p-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-600 transition-colors cursor-pointer"
-            title="Reload from Firestore"
+            title="Reload from Supabase"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -737,7 +737,7 @@ export function AdminSiteSettingsSection({ currentUser, initialTab = 'contact' }
                   <span>Admin Authentication & Account Security</span>
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  View and manage Firebase Authentication credentials, role authorization, and linked sign-in methods.
+                  View and manage Supabase Authentication credentials, role authorization, and linked sign-in methods.
                 </p>
               </div>
               <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
@@ -757,9 +757,9 @@ export function AdminSiteSettingsSection({ currentUser, initialTab = 'contact' }
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Preserved Firebase UID</span>
+                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Supabase Admin UID</span>
                 <p className="text-xs font-mono text-slate-800 break-all select-all">{currentUser?.uid || 'N/A'}</p>
-                <p className="text-[10px] text-slate-500">Exact Firebase User document ID preserved across credential linking.</p>
+                <p className="text-[10px] text-slate-500">Exact Supabase User document ID preserved across credential linking.</p>
               </div>
             </div>
 
@@ -778,7 +778,7 @@ export function AdminSiteSettingsSection({ currentUser, initialTab = 'contact' }
                 ))}
               </div>
               <p className="text-xs text-slate-500">
-                The Euro Spa Center /admin management portal uses <strong>Google Sign-In</strong> for secure administrator access. Administrative authorization is strictly governed by the <code>/admins</code> collection in Firestore.
+                The Euro Spa Center /admin management portal uses <strong>Supabase Auth</strong> for secure administrator access. Administrative authorization is strictly governed by the <code>public.admins</code> directory in Supabase.
               </p>
             </div>
           </div>

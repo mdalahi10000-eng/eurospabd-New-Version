@@ -63,9 +63,9 @@ export function AdminAboutSection({ currentUser }: AdminAboutSectionProps) {
       await updateAboutContent(content, currentUser?.email || 'admin');
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 4000);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving about content:', err);
-      alert('Failed to save About page content to Firestore.');
+      alert(err?.message || 'Failed to save About page content to Supabase.');
     } finally {
       setSaving(false);
     }
@@ -137,7 +137,7 @@ export function AdminAboutSection({ currentUser }: AdminAboutSectionProps) {
     return (
       <div className="p-12 text-center space-y-3">
         <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-xs text-slate-500 font-medium">Loading About Section content from Firestore...</p>
+        <p className="text-xs text-slate-500 font-medium">Loading About Section content from Supabase...</p>
       </div>
     );
   }
@@ -497,7 +497,7 @@ export function AdminAboutSection({ currentUser }: AdminAboutSectionProps) {
             {saving ? (
               <>
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                <span>Saving to Firestore...</span>
+                <span>Saving to Supabase...</span>
               </>
             ) : (
               <>

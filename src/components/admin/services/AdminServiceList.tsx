@@ -483,7 +483,7 @@ export function AdminServiceList({
                 Delete Service?
               </h3>
               <p className="text-xs text-slate-500 leading-relaxed">
-                Are you sure you want to delete <strong className="text-slate-800">"{serviceToDelete.name}"</strong>? This will permanently remove the service from Firestore and it will immediately be removed from the public website and booking options.
+                Are you sure you want to delete <strong className="text-slate-800">"{serviceToDelete.name}"</strong>? This will permanently remove the service from Supabase and it will immediately be removed from the public website and booking options.
               </p>
             </div>
 

@@ -1,6 +1,6 @@
 /**
- * Euro Spa & Salon Dhaka - Unified Dual-Engine Backend Adapter
- * Bridges both Supabase (Primary) and Firebase (Fallback) seamlessly.
+ * Euro Spa & Salon Dhaka - Unified Backend Adapter
+ * Powered by Supabase PostgreSQL and Realtime.
  * Zero UI changes, 100% cache preservation, full zero-downtime safety.
  */
 import { isSupabaseConfigured, getSupabase, uploadToSupabaseStorage, subscribeToSupabaseTable } from '../supabase';

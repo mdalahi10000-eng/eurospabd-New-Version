@@ -7,7 +7,6 @@ interface ReviewsSectionProps {
   onOpenReviewsModal: () => void;
   onWriteReviewClick: () => void;
   communityReviews?: StoredReview[];
-  firebaseReviews?: StoredReview[];
   syncedReviews?: ReviewItem[];
   loading?: boolean;
 }
@@ -15,12 +14,11 @@ interface ReviewsSectionProps {
 export function ReviewsSection({ 
   onOpenReviewsModal, 
   onWriteReviewClick,
-  communityReviews,
-  firebaseReviews = [],
+  communityReviews = [],
   syncedReviews,
   loading = false
 }: ReviewsSectionProps) {
-  const activeReviews = communityReviews || firebaseReviews;
+  const activeReviews = communityReviews;
   const baseReviews = (syncedReviews && syncedReviews.length > 0) ? syncedReviews : INITIAL_REVIEWS;
 
   // Filter approved Supabase reviews

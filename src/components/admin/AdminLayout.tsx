@@ -58,7 +58,7 @@ const SECTION_METADATA: Record<AdminSection, { title: string; description: strin
   blog: { title: 'Blog & Articles CMS', description: 'Create and edit wellness guides, manage SEO slugs, tags, and authors.', icon: BookOpen },
   seo: { title: 'Local SEO & Business Information', description: 'Manage canonical NAP, operating hours, target service areas, and Schema.org structured data.', icon: Search },
   contact: { title: 'Contact & Location', description: 'Update Google Maps coordinates, phone numbers, WhatsApp, and operating hours.', icon: Mail },
-  settings: { title: 'System Settings', description: 'Manage administrative roles, security rules, and Firebase configurations.', icon: Settings },
+  settings: { title: 'System Settings', description: 'Manage administrative roles, security policies, and Supabase configurations.', icon: Settings },
 };
 
 export function AdminLayout() {

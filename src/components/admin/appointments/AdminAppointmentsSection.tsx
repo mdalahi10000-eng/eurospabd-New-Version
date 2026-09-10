@@ -404,7 +404,7 @@ export function AdminAppointmentsSection({ currentUser }: AdminAppointmentsSecti
       {loading ? (
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-3">
           <div className="w-8 h-8 border-3 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-slate-500 font-medium">Loading appointments from Firestore...</p>
+          <p className="text-xs text-slate-500 font-medium">Loading appointments from Supabase...</p>
         </div>
       ) : filteredAppointments.length === 0 ? (
         <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center space-y-3">
