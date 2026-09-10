@@ -13,6 +13,14 @@ export default defineConfig(() => {
       alias: {
         '@': path.resolve(__dirname, '.'),
       },
+      dedupe: [
+        'firebase',
+        'firebase/app',
+        'firebase/auth',
+        'firebase/firestore',
+        'firebase/storage',
+        '@firebase/app',
+      ],
     },
     server: {
       host: '0.0.0.0',

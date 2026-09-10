@@ -1,0 +1,86 @@
+[
+  {
+    "_id": "faq-1",
+    "id": "faq-1",
+    "question": "Where is Euro Spa Center located in Banani?",
+    "answer": "We are conveniently located at 73 Road No. 6, Banani, Dhaka 1213, Bangladesh. We are easily accessible from Gulshan, Baridhara, and Mohakhali with dedicated valet and private entrance parking.",
+    "category": "Location & Arrival",
+    "displayOrder": 1,
+    "status": "active",
+    "sortOrder": 1,
+    "createdAt": "2026-09-08T17:51:33.584Z",
+    "updatedAt": "2026-09-08T17:51:33.584Z"
+  },
+  {
+    "_id": "faq-2",
+    "id": "faq-2",
+    "question": "Do I need an advance appointment or do you accept walk-ins?",
+    "answer": "While we welcome walk-ins based on therapist availability, we strongly recommend booking in advance via our website, direct phone call (01842-658423), or WhatsApp to ensure your preferred suite and therapist are ready upon arrival.",
+    "category": "Bookings",
+    "displayOrder": 2,
+    "status": "active",
+    "sortOrder": 2,
+    "createdAt": "2026-09-08T17:51:33.584Z",
+    "updatedAt": "2026-09-08T17:51:33.584Z"
+  },
+  {
+    "_id": "faq-3",
+    "id": "faq-3",
+    "question": "What types of massage therapy do you offer?",
+    "answer": "We specialize in Dry Massage, Relaxing Oil Massage, Swedish Massage, Deep Tissue Therapy, Aromatherapy, Hot Stone Massage, Four-Hand Synchronized Massage, and specialized Herbal Body Scrubs.",
+    "category": "Services",
+    "displayOrder": 3,
+    "status": "active",
+    "sortOrder": 3,
+    "createdAt": "2026-09-08T17:51:33.584Z",
+    "updatedAt": "2026-09-08T17:51:33.584Z"
+  },
+  {
+    "_id": "faq-4",
+    "id": "faq-4",
+    "question": "What hygiene and sanitization standards do you follow?",
+    "answer": "Cleanliness is our highest priority. All treatment suites undergo medical-grade sanitization between clients. We use 100% fresh, single-use sterilized linen, disposable slippers, and hypoallergenic organic oils.",
+    "category": "Hygiene & Safety",
+    "displayOrder": 4,
+    "status": "active",
+    "sortOrder": 4,
+    "createdAt": "2026-09-08T17:51:33.584Z",
+    "updatedAt": "2026-09-08T17:51:33.584Z"
+  },
+  {
+    "_id": "faq-5",
+    "id": "faq-5",
+    "question": "Are private showers and changing rooms available?",
+    "answer": "Yes. Every VIP therapy suite includes a private hot-water rain shower, dressing mirror, clean towels, and premium organic body wash and shampoo.",
+    "category": "Facilities",
+    "displayOrder": 5,
+    "status": "active",
+    "sortOrder": 5,
+    "createdAt": "2026-09-08T17:51:33.584Z",
+    "updatedAt": "2026-09-08T17:51:33.584Z"
+  },
+  {
+    "_id": "faq-6",
+    "id": "faq-6",
+    "question": "What are your daily operating hours?",
+    "answer": "Euro Spa Center is open 7 days a week, Monday through Sunday, from 10:00 AM to 10:00 PM, including most public holidays.",
+    "category": "General",
+    "displayOrder": 6,
+    "status": "active",
+    "sortOrder": 6,
+    "createdAt": "2026-09-08T17:51:33.584Z",
+    "updatedAt": "2026-09-08T17:51:33.584Z"
+  },
+  {
+    "_id": "faq-7",
+    "id": "faq-7",
+    "question": "What payment methods do you accept?",
+    "answer": "We accept Cash (BDT), bKash, Nagad, and all major Credit and Debit Cards (Visa, Mastercard, American Express).",
+    "category": "Pricing & Payment",
+    "displayOrder": 7,
+    "status": "active",
+    "sortOrder": 7,
+    "createdAt": "2026-09-08T17:51:33.584Z",
+    "updatedAt": "2026-09-08T17:51:33.584Z"
+  }
+]

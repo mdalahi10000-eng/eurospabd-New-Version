@@ -15,6 +15,8 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage, auth, checkIsAdmin } from '../firebase';
+import { isSupabaseConfigured, getSupabase, uploadToSupabaseStorage, subscribeToSupabaseTable } from '../supabase';
+import { mapSupabaseServiceToService, mapServiceToSupabaseRow } from './unifiedBackend';
 import { Service, PriceOption } from '../types';
 import { SERVICES_DATA, SPA_INFO } from '../data/spaData';
 import { buildCanonicalUrl } from '../config/seoConfig';
@@ -52,12 +54,24 @@ export async function checkServiceSlugAvailability(slug: string, excludeId?: str
 }
 
 /**
- * Upload service featured image to Firebase Storage
+ * Upload service featured image to Supabase Storage (primary) with Firebase Storage fallback
  */
 export async function uploadServiceImage(
   file: File, 
   onProgress?: (percentage: number) => void
 ): Promise<string> {
+  if (isSupabaseConfigured()) {
+    try {
+      const res = await uploadToSupabaseStorage('services', file.name, file);
+      if (res.url) {
+        if (onProgress) onProgress(100);
+        return res.url;
+      }
+    } catch (supaErr) {
+      console.warn('[Supabase Storage] upload failed, falling back to Firebase Storage:', supaErr);
+    }
+  }
+
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
   const storagePath = `services/${Date.now()}_${sanitizedName}`;
   const storageRef = ref(storage, storagePath);
@@ -180,6 +194,14 @@ export function getInitialServices(): Service[] {
  * Real-time listener for active public services with automatic cache synchronization
  */
 export function subscribeToPublicServices(callback: (services: Service[]) => void): () => void {
+  if (isSupabaseConfigured()) {
+    fetchPublicServices().then(callback);
+    return subscribeToSupabaseTable('services', async () => {
+      const updated = await fetchPublicServices();
+      callback(updated);
+    });
+  }
+
   try {
     const q = query(collection(db, 'services'), where('status', '==', 'active'));
     return onSnapshot(q, (snap) => {
@@ -208,6 +230,24 @@ export function subscribeToPublicServices(callback: (services: Service[]) => voi
  * Fetch all active services for the public website
  */
 export async function fetchPublicServices(): Promise<Service[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await getSupabase()
+        .from('services')
+        .select('*')
+        .eq('status', 'active')
+        .order('display_order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const list = data.map(mapSupabaseServiceToService);
+        setCachedData(CACHE_KEYS.SERVICES, list);
+        return list;
+      }
+    } catch (err) {
+      console.warn('[Supabase] fetchPublicServices fallback to Firestore:', err);
+    }
+  }
+
   try {
     const q = query(collection(db, 'services'), where('status', '==', 'active'));
     const snap = await getDocs(q);
@@ -231,6 +271,21 @@ export async function fetchPublicServices(): Promise<Service[]> {
  * Fetch all services (both Active and Inactive) for Admin CMS
  */
 export async function fetchAllServicesAdmin(): Promise<Service[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await getSupabase()
+        .from('services')
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        return data.map(mapSupabaseServiceToService);
+      }
+    } catch (err) {
+      console.warn('[Supabase] fetchAllServicesAdmin fallback to Firestore:', err);
+    }
+  }
+
   try {
     const snap = await getDocs(collection(db, 'services'));
     if (!snap.empty) {
@@ -295,13 +350,23 @@ export async function createService(data: Omit<Service, 'id'>): Promise<string> 
 
   const docRef = await addDoc(collection(db, 'services'), payload);
   const newService = { ...payload, id: docRef.id };
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supaRow = mapServiceToSupabaseRow({ ...newService, id: docRef.id });
+      await (getSupabase().from('services') as any).upsert(supaRow);
+    } catch (supaErr) {
+      console.warn('[Supabase] createService sync warning:', supaErr);
+    }
+  }
+
   const current = getInitialServices();
   setCachedData(CACHE_KEYS.SERVICES, [...current, newService]);
   return docRef.id;
 }
 
 /**
- * Update an existing service in Firestore
+ * Update an existing service in Firestore & Supabase
  */
 export async function updateService(id: string, updates: Partial<Service>): Promise<void> {
   const serviceRef = doc(db, 'services', id);
@@ -321,6 +386,15 @@ export async function updateService(id: string, updates: Partial<Service>): Prom
 
   await updateDoc(serviceRef, cleanedUpdates);
 
+  if (isSupabaseConfigured()) {
+    try {
+      const supaRow = mapServiceToSupabaseRow({ ...cleanedUpdates, id });
+      await (getSupabase().from('services') as any).update(supaRow).eq('id', id);
+    } catch (supaErr) {
+      console.warn('[Supabase] updateService sync warning:', supaErr);
+    }
+  }
+
   // Proactively update cached services immediately
   const current = getInitialServices();
   const updatedList = current.map(s => s.id === id ? { ...s, ...cleanedUpdates } : s);
@@ -328,11 +402,19 @@ export async function updateService(id: string, updates: Partial<Service>): Prom
 }
 
 /**
- * Delete a service from Firestore
+ * Delete a service from Firestore & Supabase
  */
 export async function deleteService(id: string): Promise<void> {
   const serviceRef = doc(db, 'services', id);
   await deleteDoc(serviceRef);
+
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('services') as any).delete().eq('id', id);
+    } catch (supaErr) {
+      console.warn('[Supabase] deleteService sync warning:', supaErr);
+    }
+  }
 
   // Proactively update cached services immediately
   const current = getInitialServices();

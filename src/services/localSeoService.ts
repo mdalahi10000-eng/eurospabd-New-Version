@@ -14,6 +14,8 @@ import {
   onSnapshot
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from '../supabase';
+import { mapSupabaseServiceAreaToServiceArea, mapServiceAreaToSupabaseRow } from './unifiedBackend';
 import { BusinessInfo, ServiceArea, RegularHours, DayOfWeek } from '../types';
 import { SPA_INFO } from '../data/spaData';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
@@ -178,6 +180,35 @@ export const DEFAULT_SERVICE_AREAS: Omit<ServiceArea, 'id'>[] = [
  * merging with fallback DEFAULT_BUSINESS_INFO.
  */
 export async function fetchBusinessInfo(): Promise<BusinessInfo> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('site_settings') as any)
+        .select('data')
+        .eq('id', 'business')
+        .maybeSingle();
+
+      if (!error && data?.data) {
+        const merged: BusinessInfo = {
+          ...DEFAULT_BUSINESS_INFO,
+          ...data.data,
+          regularHours: {
+            ...DEFAULT_REGULAR_HOURS,
+            ...(data.data.regularHours || {})
+          },
+          socialProfiles: {
+            ...DEFAULT_BUSINESS_INFO.socialProfiles,
+            ...(data.data.socialProfiles || {})
+          },
+          specialHours: Array.isArray(data.data.specialHours) ? data.data.specialHours : []
+        };
+        setCachedData(CACHE_KEYS.BUSINESS, merged);
+        return merged;
+      }
+    } catch (supaErr) {
+      console.warn('[Supabase] fetchBusinessInfo fallback to Firestore:', supaErr);
+    }
+  }
+
   try {
     const snap = await getDoc(SETTINGS_DOC_REF);
     if (snap.exists()) {
@@ -245,6 +276,14 @@ export function getInitialServiceAreas(): ServiceArea[] {
  * Real-time listener for canonical business information from Firestore
  */
 export function subscribeToBusinessInfo(callback: (info: BusinessInfo) => void): () => void {
+  if (isSupabaseConfigured()) {
+    fetchBusinessInfo().then(callback);
+    return subscribeToSupabaseTable('site_settings', async () => {
+      const updated = await fetchBusinessInfo();
+      callback(updated);
+    });
+  }
+
   return onSnapshot(
     SETTINGS_DOC_REF,
     (snap) => {
@@ -296,6 +335,19 @@ export async function updateBusinessInfo(
   // Update local cache immediately
   setCachedData(CACHE_KEYS.BUSINESS, merged);
 
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('site_settings') as any).upsert({
+        id: 'business',
+        data: merged,
+        updated_at: new Date().toISOString(),
+        updated_by: adminEmail || 'admin'
+      });
+    } catch (supaErr) {
+      console.warn('[Supabase] updateBusinessInfo sync error:', supaErr);
+    }
+  }
+
   await setDoc(SETTINGS_DOC_REF, {
     ...merged,
     serverTimestamp: serverTimestamp()
@@ -308,6 +360,22 @@ export async function updateBusinessInfo(
  * Fetches all service areas (for admin)
  */
 export async function fetchAllServiceAreas(): Promise<ServiceArea[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('service_areas') as any)
+        .select('*')
+        .order('display_order', { ascending: true });
+
+      if (!error && data && data.length > 0) {
+        const mapped = data.map(mapSupabaseServiceAreaToServiceArea);
+        setCachedData(CACHE_KEYS.SERVICE_AREAS, mapped);
+        return mapped;
+      }
+    } catch (supaErr) {
+      console.warn('[Supabase] fetchAllServiceAreas fallback to Firestore:', supaErr);
+    }
+  }
+
   try {
     const snap = await getDocs(query(SERVICE_AREAS_COLLECTION, orderBy('displayOrder', 'asc')));
     if (!snap.empty) {
@@ -345,6 +413,21 @@ export async function fetchPublicServiceAreas(): Promise<ServiceArea[]> {
  * Fetches a single service area by slug
  */
 export async function fetchServiceAreaBySlug(slug: string): Promise<ServiceArea | null> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('service_areas') as any)
+        .select('*')
+        .eq('slug', slug)
+        .maybeSingle();
+
+      if (!error && data) {
+        return mapSupabaseServiceAreaToServiceArea(data);
+      }
+    } catch (supaErr) {
+      console.warn('[Supabase] fetchServiceAreaBySlug fallback to Firestore:', supaErr);
+    }
+  }
+
   try {
     const q = query(SERVICE_AREAS_COLLECTION, where('slug', '==', slug));
     const snap = await getDocs(q);
@@ -379,6 +462,16 @@ export async function saveServiceArea(area: Partial<ServiceArea> & { name: strin
       slug: cleanSlug,
       updatedAt: now
     });
+
+    if (isSupabaseConfigured()) {
+      try {
+        const supaRow = mapServiceAreaToSupabaseRow({ ...data, slug: cleanSlug, id: area.id });
+        await (getSupabase().from('service_areas') as any).update(supaRow).eq('id', area.id);
+      } catch (supaErr) {
+        console.warn('[Supabase] saveServiceArea update sync error:', supaErr);
+      }
+    }
+
     const current = getInitialServiceAreas();
     setCachedData(CACHE_KEYS.SERVICE_AREAS, current.map(a => a.id === area.id ? { ...a, ...data, slug: cleanSlug, updatedAt: now } : a));
     return area.id;
@@ -394,6 +487,16 @@ export async function saveServiceArea(area: Partial<ServiceArea> & { name: strin
       updatedAt: now
     };
     const docRef = await addDoc(SERVICE_AREAS_COLLECTION, newAreaPayload);
+
+    if (isSupabaseConfigured()) {
+      try {
+        const supaRow = mapServiceAreaToSupabaseRow({ ...newAreaPayload, id: docRef.id });
+        await (getSupabase().from('service_areas') as any).upsert(supaRow);
+      } catch (supaErr) {
+        console.warn('[Supabase] saveServiceArea insert sync error:', supaErr);
+      }
+    }
+
     const current = getInitialServiceAreas();
     setCachedData(CACHE_KEYS.SERVICE_AREAS, [...current, { ...newAreaPayload, id: docRef.id }]);
     return docRef.id;
@@ -409,6 +512,15 @@ export async function deleteServiceArea(areaId: string): Promise<void> {
   }
   const docRef = doc(SERVICE_AREAS_COLLECTION, areaId);
   await deleteDoc(docRef);
+
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('service_areas') as any).delete().eq('id', areaId);
+    } catch (supaErr) {
+      console.warn('[Supabase] deleteServiceArea sync error:', supaErr);
+    }
+  }
+
   const current = getInitialServiceAreas();
   setCachedData(CACHE_KEYS.SERVICE_AREAS, current.filter(a => a.id !== areaId));
 }

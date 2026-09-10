@@ -1,0 +1,17 @@
+{
+  "exportedAt": "2026-09-08T17:51:33.743Z",
+  "databaseId": "ai-studio-eurospabdnewvers-96ace775-fc8a-4d11-984f-6657377b7e42",
+  "collections": {
+    "users": 1,
+    "admins": 1,
+    "services": 7,
+    "reviews": 21,
+    "appointments": 0,
+    "articles": 1,
+    "gallery": 10,
+    "siteSettings": 2,
+    "serviceAreas": 6,
+    "faqs": 7,
+    "google_business_sync": 1
+  }
+}

@@ -12,6 +12,7 @@ import {
   Timestamp 
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from '../supabase';
 import { SPA_INFO, INITIAL_REVIEWS, PHOTOS_DATA, USER_PROVIDED_PHOTOS } from '../data/spaData';
 import { ReviewItem, PhotoItem } from '../types';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
@@ -382,6 +383,20 @@ export async function syncGoogleBusinessData(
     // Save to Firestore so every user on the website receives the synced photos in real-time
     await setDoc(SYNC_DOC_REF, payload, { merge: true });
 
+    if (isSupabaseConfigured()) {
+      try {
+        await (getSupabase().from('google_business_sync') as any).upsert({
+          id: 'euro_spa_center',
+          status: 'synced',
+          sync_summary: payload,
+          last_sync_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      } catch (supaErr) {
+        console.warn('[Supabase] google_business_sync sync error:', supaErr);
+      }
+    }
+
     return payload;
   } catch (error) {
     console.error('Error syncing Google Business data:', error);
@@ -436,6 +451,39 @@ export function getInitialGoogleBusinessSync(): SyncedGoogleData | null {
  * Subscribe to real-time Google Business Profile updates in Firestore
  */
 export function subscribeToGoogleBusinessSync(callback: (data: SyncedGoogleData | null) => void) {
+  if (isSupabaseConfigured()) {
+    // Initial fetch from Supabase
+    (getSupabase().from('google_business_sync') as any)
+      .select('*')
+      .eq('id', 'euro_spa_center')
+      .maybeSingle()
+      .then(({ data, error }: any) => {
+        if (!error && data?.sync_summary) {
+          const syncData = data.sync_summary as SyncedGoogleData;
+          syncData.photos = sanitizePhotos(syncData.photos);
+          setCachedData(CACHE_KEYS.GOOGLE_SYNC, syncData);
+          callback(syncData);
+        } else {
+          callback(getInitialGoogleBusinessSync());
+        }
+      })
+      .catch(() => callback(getInitialGoogleBusinessSync()));
+
+    return subscribeToSupabaseTable('google_business_sync', async () => {
+      const { data } = await (getSupabase().from('google_business_sync') as any)
+        .select('*')
+        .eq('id', 'euro_spa_center')
+        .maybeSingle();
+
+      if (data?.sync_summary) {
+        const syncData = data.sync_summary as SyncedGoogleData;
+        syncData.photos = sanitizePhotos(syncData.photos);
+        setCachedData(CACHE_KEYS.GOOGLE_SYNC, syncData);
+        callback(syncData);
+      }
+    });
+  }
+
   try {
     return onSnapshot(SYNC_DOC_REF, (snapshot) => {
       if (snapshot.exists()) {

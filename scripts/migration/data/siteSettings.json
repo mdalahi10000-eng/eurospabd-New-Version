@@ -1,0 +1,134 @@
+[
+  {
+    "_id": "business",
+    "specialHours": [],
+    "displayHours": "10:00 AM – 10:00 PM Daily",
+    "schemaType": "DaySpa",
+    "plusCode": "QCV3+76 Dhaka, Bangladesh",
+    "primaryCategory": "Spa and Wellness Center",
+    "addressLine": "73 Road No. 6",
+    "updatedAt": "2026-09-08T08:30:45.235Z",
+    "currenciesAccepted": "BDT",
+    "description": "Euro Spa Center is a professional spa and wellness center in Banani, Dhaka. We offer Swedish Massage, Deep Tissue Massage, Aromatherapy, Hot Stone Massage, Body Scrub, and wellness treatments in a clean, comfortable, and relaxing environment. Visit us at 73 Road No. 6, Banani, Dhaka 1213.",
+    "googleBusinessProfileUrl": "https://www.google.com/maps/place/Euro+Spa+Center/@23.7931511,90.4030721,17z/data=!4m6!3m5!1s0x3755c7d7ea287605:0xde1e138b608693d5!8m2!3d23.7931511!4d90.4030721!16s%2Fg%2F11zbcx07pr",
+    "latitude": 23.7931511,
+    "tagline": "Relax • Refresh • Rejuvenate",
+    "websiteUrl": "https://eurospabd.com/",
+    "area": "Banani",
+    "socialProfiles": {
+      "linkedin": "",
+      "instagram": "https://www.instagram.com/euro.spa.center/",
+      "tiktok": "",
+      "twitter": "",
+      "facebook": "https://www.facebook.com/profile.php?id=61592822445077",
+      "pinterest": "",
+      "youtube": ""
+    },
+    "priceRange": "BDT 3,500 - 15,000",
+    "whatsappFormatted": "+880 1842-658423",
+    "displayStatus": "Open 10:00 AM – 10:00 PM",
+    "businessName": "Euro Spa Center",
+    "postalCode": "1213",
+    "country": "BD",
+    "whatsappNumber": "8801842658423",
+    "secondaryCategories": [
+      "HealthAndBeautyBusiness",
+      "Spa and Wellness Center",
+      "Massage Therapist",
+      "Aromatherapy Service",
+      "spa",
+      "Massasge Spa"
+    ],
+    "email": "info@eurospacenter.com",
+    "regularHours": {
+      "friday": {
+        "opens": "10:00",
+        "open": true,
+        "closes": "22:00"
+      },
+      "tuesday": {
+        "opens": "10:00",
+        "closes": "22:00",
+        "open": true
+      },
+      "saturday": {
+        "closes": "22:00",
+        "open": true,
+        "opens": "10:00"
+      },
+      "sunday": {
+        "opens": "10:00",
+        "open": true,
+        "closes": "22:00"
+      },
+      "wednesday": {
+        "opens": "10:00",
+        "closes": "22:00",
+        "open": true
+      },
+      "thursday": {
+        "open": true,
+        "closes": "22:00",
+        "opens": "10:00"
+      },
+      "monday": {
+        "opens": "10:00",
+        "open": true,
+        "closes": "22:00"
+      }
+    },
+    "paymentAccepted": "Cash, bKash, Credit Card, Debit Card",
+    "updatedBy": "mdalahi10000@gmail.com",
+    "googleMapsUrl": "https://www.google.com/maps/place/Euro+Spa+Center/@23.7931511,90.4030721,17z/data=!4m6!3m5!1s0x3755c7d7ea287605:0xde1e138b608693d5!8m2!3d23.7931511!4d90.4030721!16s%2Fg%2F11zbcx07pr",
+    "googleCid": "16005206941168178133",
+    "displayPhone": "01842-658423",
+    "fullAddress": "73 Road No. 6, Banani, Dhaka 1213, Bangladesh",
+    "googlePlaceId": "ChIJBXYo6tfHVTcR1ZOGYIsTHt4",
+    "longitude": 90.4030721,
+    "phone": "+880 1842-658423",
+    "serverTimestamp": "2026-09-08T08:30:48.516Z",
+    "city": "Dhaka"
+  },
+  {
+    "_id": "homepage",
+    "updatedAt": "2026-09-08T12:03:39.853Z",
+    "heroTagline": "Relax • Refresh • Rejuvenate",
+    "floatingWhatsapp": {
+      "enabled": true,
+      "tooltipText": "Chat on WhatsApp"
+    },
+    "updatedBy": "mdalahi10000@gmail.com",
+    "heroBannerImage": "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w800-h450-k-no",
+    "heroTitle": "Euro Spa Center",
+    "logoImage": "",
+    "locationBadge": "Banani, Dhaka",
+    "statusBadge": "Open · 10:00 AM – 10:00 PM Daily",
+    "announcementBanner": {
+      "linkText": "Book Now",
+      "text": "Limited Time Offer: Enjoy 15% OFF on selected massage treatments at Euro Spa Center, Banani. Relax, refresh & rejuvenate.",
+      "enabled": true
+    },
+    "heroBannerAlt": "Euro Spa Center Ambience",
+    "ctaButtons": {
+      "whatsapp": {
+        "enabled": true,
+        "label": "WhatsApp"
+      },
+      "directions": {
+        "enabled": true,
+        "label": "Directions"
+      },
+      "call": {
+        "enabled": true,
+        "label": "Call"
+      },
+      "bookNow": {
+        "label": "Book Now",
+        "enabled": true
+      }
+    },
+    "ratingOverride": 4.8,
+    "categoryBadge": "Spa and Wellness Center",
+    "reviewsCountOverride": 30
+  }
+]

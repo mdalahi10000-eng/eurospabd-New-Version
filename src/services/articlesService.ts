@@ -14,6 +14,8 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { db, storage, withTimeout } from '../firebase';
+import { isSupabaseConfigured, getSupabase, uploadToSupabaseStorage, subscribeToSupabaseTable } from '../supabase';
+import { mapSupabaseArticleToArticle, mapArticleToSupabaseRow } from './unifiedBackend';
 import { Article } from '../types';
 import { SERVICES_DATA, PHOTOS_DATA } from '../data/spaData';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
@@ -58,14 +60,27 @@ export async function checkSlugAvailability(slug: string, excludeId?: string): P
 }
 
 /**
- * Upload an article featured image to Firebase Storage
+ * Upload an article featured image to Firebase Storage (with Supabase Storage support)
  */
 export async function uploadArticleImage(
   file: File, 
   onProgress?: (percentage: number) => void
 ): Promise<string> {
-  // Clean filename and add timestamp
   const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+
+  if (isSupabaseConfigured()) {
+    try {
+      const res = await uploadToSupabaseStorage('articles', sanitizedName, file);
+      if (res.url) {
+        if (onProgress) onProgress(100);
+        return res.url;
+      }
+    } catch (supaErr) {
+      console.warn('[Supabase Storage] article image upload fallback:', supaErr);
+    }
+  }
+
+  // Clean filename and add timestamp
   const storagePath = `articles/${Date.now()}_${sanitizedName}`;
   const storageRef = ref(storage, storagePath);
 
@@ -102,6 +117,20 @@ export async function uploadArticleImage(
  * Fetch all articles (both Draft and Published) for the Admin CMS
  */
 export async function fetchAllArticlesAdmin(): Promise<Article[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('articles') as any)
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data.map(mapSupabaseArticleToArticle);
+      }
+    } catch (err) {
+      console.warn('[Supabase] fetchAllArticlesAdmin fallback to Firestore:', err);
+    }
+  }
+
   try {
     const snap = await getDocs(collection(db, 'articles'));
     if (!snap.empty) {
@@ -155,6 +184,16 @@ export async function createArticle(data: Omit<Article, 'id'>): Promise<string> 
   };
 
   const docRef = await addDoc(collection(db, 'articles'), articlePayload);
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supaRow = mapArticleToSupabaseRow({ ...articlePayload, id: docRef.id } as any);
+      await (getSupabase().from('articles') as any).upsert(supaRow);
+    } catch (err) {
+      console.warn('[Supabase] createArticle sync error:', err);
+    }
+  }
+
   if (articlePayload.status === 'published') {
     const current = getInitialArticles();
     setCachedData(CACHE_KEYS.ARTICLES, [{ ...articlePayload, id: docRef.id }, ...current]);
@@ -186,6 +225,16 @@ export async function updateArticle(id: string, updates: Partial<Article>): Prom
   });
 
   await updateDoc(articleRef, cleanedUpdates);
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supaRow = mapArticleToSupabaseRow({ ...cleanedUpdates, id } as any);
+      await (getSupabase().from('articles') as any).update(supaRow).eq('id', id);
+    } catch (err) {
+      console.warn('[Supabase] updateArticle sync error:', err);
+    }
+  }
+
   const current = getInitialArticles();
   if (cleanedUpdates.status === 'draft') {
     setCachedData(CACHE_KEYS.ARTICLES, current.filter(a => a.id !== id));
@@ -200,6 +249,15 @@ export async function updateArticle(id: string, updates: Partial<Article>): Prom
 export async function deleteArticle(id: string): Promise<void> {
   const articleRef = doc(db, 'articles', id);
   await deleteDoc(articleRef);
+
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('articles') as any).delete().eq('id', id);
+    } catch (err) {
+      console.warn('[Supabase] deleteArticle sync error:', err);
+    }
+  }
+
   const current = getInitialArticles();
   setCachedData(CACHE_KEYS.ARTICLES, current.filter(a => a.id !== id));
 }
@@ -241,6 +299,14 @@ export function getInitialArticles(): Article[] {
  * Real-time listener for published articles with automatic cache synchronization
  */
 export function subscribeToPublishedArticles(callback: (articles: Article[]) => void): () => void {
+  if (isSupabaseConfigured()) {
+    fetchPublishedArticles().then(callback);
+    return subscribeToSupabaseTable('articles', async () => {
+      const updated = await fetchPublishedArticles();
+      callback(updated);
+    });
+  }
+
   try {
     const q = query(
       collection(db, 'articles'),
@@ -282,6 +348,23 @@ export function subscribeToPublishedArticles(callback: (articles: Article[]) => 
  * Returns an empty array if there are currently no published articles.
  */
 export async function fetchPublishedArticles(): Promise<Article[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('articles') as any)
+        .select('*')
+        .eq('status', 'published')
+        .order('published_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const list = data.map(mapSupabaseArticleToArticle);
+        setCachedData(CACHE_KEYS.ARTICLES, list);
+        return list;
+      }
+    } catch (err) {
+      console.warn('[Supabase] fetchPublishedArticles fallback to Firestore:', err);
+    }
+  }
+
   try {
     const q = query(
       collection(db, 'articles'),
@@ -316,6 +399,22 @@ export async function fetchPublishedArticles(): Promise<Article[]> {
  * Draft or unpublished articles will return null and are not publicly accessible.
  */
 export async function fetchArticleBySlug(slug: string): Promise<Article | null> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('articles') as any)
+        .select('*')
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .maybeSingle();
+
+      if (!error && data) {
+        return mapSupabaseArticleToArticle(data);
+      }
+    } catch (err) {
+      console.warn('[Supabase] fetchArticleBySlug fallback to Firestore:', err);
+    }
+  }
+
   try {
     const q = query(
       collection(db, 'articles'),

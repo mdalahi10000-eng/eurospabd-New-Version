@@ -6,6 +6,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from '../supabase';
 import { SPA_INFO } from '../data/spaData';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
@@ -70,6 +71,38 @@ export const DEFAULT_HOMEPAGE_CONTENT: HomepageContent = {
 const HOMEPAGE_DOC_REF = doc(db, 'siteSettings', 'homepage');
 
 export async function fetchHomepageContent(): Promise<HomepageContent> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('site_settings') as any)
+        .select('data')
+        .eq('id', 'homepage')
+        .maybeSingle();
+
+      if (!error && data?.data) {
+        const merged: HomepageContent = {
+          ...DEFAULT_HOMEPAGE_CONTENT,
+          ...data.data,
+          ctaButtons: {
+            ...DEFAULT_HOMEPAGE_CONTENT.ctaButtons,
+            ...(data.data.ctaButtons || {})
+          },
+          floatingWhatsapp: {
+            ...DEFAULT_HOMEPAGE_CONTENT.floatingWhatsapp,
+            ...(data.data.floatingWhatsapp || {})
+          },
+          announcementBanner: {
+            ...DEFAULT_HOMEPAGE_CONTENT.announcementBanner,
+            ...(data.data.announcementBanner || {})
+          }
+        };
+        setCachedData(CACHE_KEYS.HOMEPAGE, merged);
+        return merged;
+      }
+    } catch (supaErr) {
+      console.warn('[Supabase] fetchHomepageContent fallback to Firestore:', supaErr);
+    }
+  }
+
   try {
     const snap = await getDoc(HOMEPAGE_DOC_REF);
     if (snap.exists()) {
@@ -127,6 +160,14 @@ export function getInitialHomepageContent(): HomepageContent {
 }
 
 export function subscribeToHomepageContent(callback: (content: HomepageContent) => void): () => void {
+  if (isSupabaseConfigured()) {
+    fetchHomepageContent().then(callback);
+    return subscribeToSupabaseTable('site_settings', async () => {
+      const updated = await fetchHomepageContent();
+      callback(updated);
+    });
+  }
+
   try {
     return onSnapshot(HOMEPAGE_DOC_REF, (snap) => {
       if (snap.exists()) {
@@ -171,6 +212,19 @@ export async function updateHomepageContent(content: HomepageContent, updatedBy?
   };
   // Update local cache immediately
   setCachedData(CACHE_KEYS.HOMEPAGE, merged);
+
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('site_settings') as any).upsert({
+        id: 'homepage',
+        data: merged,
+        updated_at: new Date().toISOString(),
+        updated_by: updatedBy || 'admin'
+      });
+    } catch (supaErr) {
+      console.warn('[Supabase] updateHomepageContent sync error:', supaErr);
+    }
+  }
 
   await setDoc(HOMEPAGE_DOC_REF, {
     ...merged,

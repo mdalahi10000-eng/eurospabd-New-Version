@@ -1,0 +1,455 @@
+[
+  {
+    "_id": "Nf498guI9tV8BvTpvLfI",
+    "image": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "status": "active",
+    "secondaryKeywords": [
+      "deep tissue massage banani",
+      "deep tissue massage dhaka",
+      "massage center banani",
+      "spa massage banani"
+    ],
+    "imageAlt": "Deep tissue massage session at Euro Spa Center in Banani, Dhaka",
+    "canonicalUrl": "https://eurospabd.com/services/deep-tissue-massage",
+    "focusKeyword": "deep tissue massage",
+    "ogTitle": "Deep Tissue Massage in Banani, Dhaka | Euro Spa Center",
+    "customSchema": "",
+    "durationRange": "60 / 90 Minutes",
+    "slug": "deep-tissue-massage",
+    "name": "Deep Tissue Massage",
+    "benefits": [
+      "Relieves muscle tension",
+      "Promotes deep relaxation",
+      "Improves blood circulation"
+    ],
+    "shortDescription": "Deep tissue massage in Banani, Dhaka designed to relieve muscle tension, support relaxation, and promote overall body wellness.",
+    "bookingCta": "Book This Treatment",
+    "robotsFollow": true,
+    "displayOrder": 0,
+    "ogDescription": "Deep tissue massage in Banani, Dhaka designed to relieve muscle tension, support relaxation, and promote overall body wellness.",
+    "seoTitle": "Deep Tissue Massage in Banani, Dhaka | Euro Spa Center",
+    "fullDescription": "Deep tissue massage at Euro Spa Center in Banani, Dhaka uses focused massage techniques to help relieve muscle tension and promote relaxation. Enjoy professional care in a clean, comfortable environment designed for your wellness and relaxation.",
+    "serviceAreas": [
+      "Dhaka",
+      "Banani",
+      "Gulshan",
+      "Baridhara",
+      "Dhanmondi",
+      "Uttara"
+    ],
+    "price": "BDT 6,500",
+    "galleryImages": [
+      "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no"
+    ],
+    "createdAt": "2026-09-08T11:50:04.035Z",
+    "priceOptions": [
+      {
+        "duration": "60 Minutes",
+        "price": "BDT 6,500",
+        "amount": 6500
+      }
+    ],
+    "metaDescription": "Deep tissue massage in Banani, Dhaka designed to relieve muscle tension, support relaxation, and promote overall body wellness.",
+    "schemaType": "HealthAndBeautyBusiness",
+    "category": "Massage Therapy",
+    "updatedAt": "2026-09-08T11:58:17.896Z",
+    "popular": false,
+    "ogImage": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "robotsIndex": true
+  },
+  {
+    "_id": "UEjkm2Bu6KpRLoStA7Xi",
+    "secondaryKeywords": [
+      "massage therapy Banani Dhaka",
+      "professional massage Banani",
+      "spa massage Banani",
+      "massage center Banani"
+    ],
+    "ogImage": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "serviceAreas": [
+      "Dhaka",
+      "Banani",
+      "Gulshan",
+      "Baridhara"
+    ],
+    "popular": false,
+    "seoTitle": "Massage Therapy in Banani, Dhaka | Euro Spa Center",
+    "displayOrder": 0,
+    "robotsFollow": true,
+    "image": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "shortDescription": "Professional massage therapy in Banani, Dhaka designed to relieve everyday muscle tension, promote relaxation, and support overall wellness.",
+    "category": "Massage Therapy",
+    "updatedAt": "2026-09-08T09:54:51.281Z",
+    "galleryImages": [
+      "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no"
+    ],
+    "createdAt": "2026-09-08T09:51:41.997Z",
+    "ogDescription": "Professional massage therapy in Banani, Dhaka designed to relieve everyday muscle tension, promote relaxation, and support overall wellness.",
+    "priceOptions": [
+      {
+        "amount": 3500,
+        "price": "BDT 3,500",
+        "duration": "30 Minutes"
+      },
+      {
+        "price": "BDT 5,500",
+        "amount": 5500,
+        "duration": "60 Minutes"
+      }
+    ],
+    "focusKeyword": "massage therapy",
+    "customSchema": "",
+    "price": "BDT 3,500",
+    "canonicalUrl": "https://eurospabd.com/services/massage-therapy",
+    "robotsIndex": true,
+    "durationRange": "60 / 90 Minutes",
+    "metaDescription": "Professional massage therapy in Banani, Dhaka designed to relieve everyday muscle tension, promote relaxation, and support overall wellness.",
+    "schemaType": "HealthAndBeautyBusiness",
+    "imageAlt": "Professional massage therapy at Euro Spa Center in Banani, Dhaka",
+    "benefits": [
+      "Relieves muscle tension",
+      "Promotes deep relaxation",
+      "Improves blood circulation",
+      "Supports overall body wellness"
+    ],
+    "ogTitle": "Massage Therapy in Banani, Dhaka | Euro Spa Center",
+    "fullDescription": "Euro Spa Center offers professional massage therapy in Banani, Dhaka in a clean, comfortable environment. Our massage therapy is designed to help relieve everyday muscle tension, promote deep relaxation, and support overall body wellness. Choose a suitable session duration and enjoy a personalized wellness experience at our spa center.",
+    "status": "active",
+    "slug": "massage-therapy",
+    "bookingCta": "Book This Treatment",
+    "name": "Massage Therapy"
+  },
+  {
+    "_id": "aroma-body-massage",
+    "seoTitle": "Aromatherapy Massage in Banani, Dhaka | Euro Spa Center",
+    "status": "active",
+    "durationRange": "30 / 60 / 90 Minutes",
+    "bookingCta": "Book This Treatment",
+    "shortDescription": "A calming aroma body massage designed to relax the body and create a soothing spa experience.",
+    "focusKeyword": "aromatherapy massage",
+    "name": "Aromatherapy Massage",
+    "customSchema": "",
+    "schemaType": "HealthAndBeautyBusiness",
+    "slug": "aromatherapy-massage",
+    "canonicalUrl": "https://eurospabd.com/services/aromatherapy-massage",
+    "price": "BDT 8,000",
+    "ogTitle": "Aromatherapy Massage in Banani, Dhaka | Euro Spa Center",
+    "secondaryKeywords": [
+      "massage banani",
+      "dhaka wellness spa",
+      "relaxation therapy",
+      "aromatherapy massage banani",
+      "aromatherapy massage dhaka",
+      "aromatherapy spa banani",
+      "massage center banani"
+    ],
+    "category": "Massage Therapy",
+    "popular": false,
+    "imageAlt": "Aromatherapy massage session at Euro Spa Center in Banani, Dhaka",
+    "ogImage": "/photos/Image Aug.png",
+    "fullDescription": "Aromatherapy massage at Euro Spa Center in Banani, Dhaka is designed to promote relaxation and overall wellness. Our professional aromatherapy massage provides a calming experience in a clean and comfortable spa environment. Enjoy personalized care focused on relaxation, stress relief, and body wellness.",
+    "priceOptions": [
+      {
+        "duration": "60 Minutes",
+        "amount": 8000,
+        "price": "BDT 8,000"
+      },
+      {
+        "price": "BDT 10,500",
+        "amount": 10500,
+        "duration": "90 Minutes"
+      }
+    ],
+    "id": "aroma-body-massage",
+    "serviceAreas": [
+      "Dhaka",
+      "Banani",
+      "Gulshan",
+      "Dhanmondi"
+    ],
+    "robotsIndex": true,
+    "updatedAt": "2026-09-08T11:57:05.599Z",
+    "image": "/photos/Image Aug.png",
+    "metaDescription": "Aromatherapy massage at Euro Spa Center in Banani, Dhaka is designed to promote relaxation and overall wellness.",
+    "galleryImages": [
+      "/photos/Image Aug.png"
+    ],
+    "displayOrder": 2,
+    "ogDescription": "A calming aroma body massage designed to relax the body and create a soothing spa experience.",
+    "benefits": [
+      "Calming spa experience",
+      "Helps reduce everyday tension",
+      "Promotes relaxation"
+    ],
+    "robotsFollow": true,
+    "createdAt": "2026-09-07T18:34:13.825Z"
+  },
+  {
+    "_id": "dry-massage",
+    "name": "Dry Massage",
+    "bookingCta": "Book This Treatment",
+    "slug": "dry-massage",
+    "popular": true,
+    "ogImage": "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w1200-h800-k-no",
+    "benefits": [
+      "Relieves muscle tension",
+      "Promotes relaxation",
+      "Helps refresh the body"
+    ],
+    "imageAlt": "Dry Massage session at Euro Spa Center Banani",
+    "image": "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w1200-h800-k-no",
+    "durationRange": "30 / 60 / 90 Minutes",
+    "id": "dry-massage",
+    "canonicalUrl": "https://eurospabd.com/services/dry-massage",
+    "updatedAt": "2026-09-08T09:57:13.240Z",
+    "customSchema": "",
+    "shortDescription": "A relaxing dry massage designed to release muscle tension and promote overall relaxation.",
+    "focusKeyword": "dry massage",
+    "schemaType": "HealthAndBeautyBusiness",
+    "status": "active",
+    "createdAt": "2026-09-07T18:34:12.352Z",
+    "secondaryKeywords": [
+      "massage banani",
+      "dhaka wellness spa",
+      "relaxation therapy",
+      "dry massage banani",
+      "dry massage dhaka",
+      "massage center banani",
+      "spa massage banani"
+    ],
+    "robotsIndex": true,
+    "fullDescription": "A professional dry massage focused on relieving everyday muscle tension, improving relaxation, and helping the body feel refreshed.",
+    "priceOptions": [
+      {
+        "duration": "30 Minutes",
+        "amount": 3500,
+        "price": "BDT 3500"
+      },
+      {
+        "amount": 5500,
+        "duration": "60 Minutes",
+        "price": "BDT 5,500"
+      },
+      {
+        "price": "BDT 7,500",
+        "duration": "90 Minutes",
+        "amount": 7500
+      }
+    ],
+    "ogDescription": "A relaxing dry massage designed to release muscle tension and promote overall relaxation.",
+    "galleryImages": [
+      "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w1200-h800-k-no"
+    ],
+    "category": "Massage Therapy",
+    "serviceAreas": [
+      "Dhaka",
+      "Banani",
+      "Gulshan",
+      "Dhanmondi",
+      "Mohakhali"
+    ],
+    "seoTitle": "Dry Massage in Banani, Dhaka | Euro Spa Center",
+    "metaDescription": "Dry massage in Banani, Dhaka at Euro Spa Center. Enjoy a professional massage designed to promote relaxation and help relieve everyday muscle tension.",
+    "robotsFollow": true,
+    "price": "BDT 3500",
+    "ogTitle": "Dry Massage in Banani, Dhaka | Euro Spa Center",
+    "displayOrder": 0
+  },
+  {
+    "_id": "fVEDcWrPaaaeHkKT9LIN",
+    "ogDescription": "Hot stone massage in Banani, Dhaka designed to promote deep relaxation, ease muscle tension, and support overall wellness.",
+    "galleryImages": [
+      "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no"
+    ],
+    "seoTitle": "Hot Stone Massage in Banani, Dhaka | Euro Spa Center",
+    "fullDescription": "Hot stone massage at Euro Spa Center in Banani, Dhaka combines professional massage techniques with heated stones to promote deep relaxation and help ease everyday muscle tension. Enjoy a calming wellness experience in a clean and comfortable environment.",
+    "price": "BDT 8,500",
+    "status": "active",
+    "shortDescription": "Hot stone massage in Banani, Dhaka designed to promote deep relaxation, ease muscle tension, and support overall wellness.",
+    "metaDescription": "Hot stone massage in Banani, Dhaka designed to promote deep relaxation, ease muscle tension, and support overall wellness.",
+    "ogImage": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "slug": "hot-stone-massage",
+    "secondaryKeywords": [
+      "hot stone massage banani",
+      "hot stone massage dhaka",
+      "spa massage banani",
+      "massage center banani"
+    ],
+    "canonicalUrl": "https://eurospabd.com/services/hot-stone-massage",
+    "customSchema": "",
+    "category": "Massage Therapy",
+    "popular": false,
+    "name": "Hot Stone Massage",
+    "focusKeyword": "hot stone massage",
+    "priceOptions": [
+      {
+        "amount": 8500,
+        "price": "BDT 8,500",
+        "duration": "60 Minutes"
+      },
+      {
+        "amount": 10500,
+        "price": "BDT 10,500",
+        "duration": "90 Minutes"
+      }
+    ],
+    "imageAlt": "Hot stone massage session at Euro Spa Center in Banani, Dhaka",
+    "image": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "bookingCta": "Book This Treatment",
+    "createdAt": "2026-09-08T11:55:42.616Z",
+    "ogTitle": "Hot Stone Massage in Banani, Dhaka | Euro Spa Center",
+    "updatedAt": "2026-09-08T11:55:38.853Z",
+    "robotsIndex": true,
+    "schemaType": "HealthAndBeautyBusiness",
+    "displayOrder": 0,
+    "robotsFollow": true,
+    "durationRange": "60 / 90 Minutes",
+    "benefits": [
+      "Relieves muscle tension",
+      "Promotes deep relaxation",
+      "Improves blood circulation"
+    ],
+    "serviceAreas": [
+      "Dhaka",
+      "Banani",
+      "Gulshan",
+      "Baridhara",
+      "Dhanmondi",
+      "Uttara"
+    ]
+  },
+  {
+    "_id": "oil-massage",
+    "createdAt": "2026-09-07T18:34:13.085Z",
+    "image": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "ogTitle": "Oil Massage in Banani, Dhaka | Euro Spa Center",
+    "seoTitle": "Oil Massage in Banani, Dhaka | Euro Spa Center",
+    "metaDescription": "Oil massage in Banani, Dhaka at Euro Spa Center. Enjoy a soothing professional massage designed to promote relaxation and help relieve everyday muscle tension.",
+    "secondaryKeywords": [
+      "massage banani",
+      "dhaka wellness spa",
+      "relaxation therapy",
+      "oil massage banani",
+      "oil massage dhaka",
+      "massage center banani",
+      "spa massage banani"
+    ],
+    "updatedAt": "2026-09-08T11:50:09.896Z",
+    "name": "Oil Massage",
+    "customSchema": "",
+    "category": "Massage Therapy",
+    "focusKeyword": "oil massage",
+    "fullDescription": "A professional oil massage using smooth massage techniques to help relax tired muscles and promote a calm, comfortable experience.",
+    "slug": "oil-massage",
+    "canonicalUrl": "https://eurospabd.com/services/oil-massage",
+    "galleryImages": [
+      "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no"
+    ],
+    "ogDescription": "A soothing oil massage designed to relax the body and ease everyday muscle tension.",
+    "durationRange": "30 / 60 / 90 Minutes",
+    "status": "active",
+    "robotsIndex": true,
+    "price": "BDT 3,500",
+    "imageAlt": "Oil Massage session at Euro Spa Center Banani",
+    "priceOptions": [
+      {
+        "duration": "30 Minutes",
+        "amount": 3500,
+        "price": "BDT 3,500"
+      },
+      {
+        "amount": 5500,
+        "duration": "60 Minutes",
+        "price": "BDT 5,500"
+      },
+      {
+        "amount": 7000,
+        "price": "BDT 7,000",
+        "duration": "90 Minutes"
+      }
+    ],
+    "shortDescription": "A soothing oil massage designed to relax the body and ease everyday muscle tension.",
+    "schemaType": "HealthAndBeautyBusiness",
+    "serviceAreas": [
+      "Dhaka",
+      "Banani",
+      "Gulshan",
+      "Dhanmondi",
+      "Uttara",
+      "Baridhara"
+    ],
+    "benefits": [
+      "Relaxing oil massage",
+      "Eases muscle tension",
+      "Promotes relaxation"
+    ],
+    "popular": true,
+    "ogImage": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "robotsFollow": true,
+    "bookingCta": "Book This Treatment",
+    "displayOrder": 1,
+    "id": "oil-massage"
+  },
+  {
+    "_id": "swedish",
+    "robotsIndex": true,
+    "shortDescription": "A relaxing Swedish massage designed to ease muscle tension and promote overall relaxation.",
+    "priceOptions": [
+      {
+        "amount": 5500,
+        "duration": "30 Minutes",
+        "price": "BDT 5,500"
+      },
+      {
+        "price": "BDT 7,500",
+        "duration": "60 Minutes",
+        "amount": 7500
+      }
+    ],
+    "bookingCta": "Book This Treatment",
+    "benefits": [
+      "Relieves muscle tension",
+      "Promotes relaxation",
+      "Calming massage experience"
+    ],
+    "metaDescription": "Swedish massage in Banani, Dhaka at Euro Spa Center. Enjoy a relaxing professional massage in a clean, comfortable wellness environment.",
+    "name": "Swedish Massage",
+    "schemaType": "HealthAndBeautyBusiness",
+    "fullDescription": "A professional Swedish massage using smooth, flowing massage techniques to help relax the body and relieve everyday muscle tension.",
+    "price": "BDT 5,500",
+    "displayOrder": 3,
+    "ogDescription": "A relaxing Swedish massage designed to ease muscle tension and promote overall relaxation.",
+    "robotsFollow": true,
+    "galleryImages": [
+      "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no"
+    ],
+    "slug": "swedish-massage",
+    "imageAlt": "Swedish Massage session at Euro Spa Center Banani",
+    "ogImage": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "serviceAreas": [
+      "Dhaka",
+      "Banani",
+      "Gulshan",
+      "Dhanmondi"
+    ],
+    "popular": false,
+    "createdAt": "2026-09-07T18:34:14.557Z",
+    "category": "Massage Therapy",
+    "secondaryKeywords": [
+      "massage banani",
+      "dhaka wellness spa",
+      "relaxation therapy",
+      "swedish massage"
+    ],
+    "updatedAt": "2026-09-08T11:57:34.577Z",
+    "durationRange": "60 Minutes",
+    "ogTitle": "Swedish Massage | Euro Spa Center Banani",
+    "id": "swedish",
+    "image": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    "canonicalUrl": "https://eurospabd.com/services/swedish-massage",
+    "status": "active",
+    "customSchema": "",
+    "seoTitle": "Swedish Massage in Banani, Dhaka | Euro Spa Center",
+    "focusKeyword": "swedish massage"
+  }
+]

@@ -1,6 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
+  initializeAuth,
+  indexedDBLocalPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
+  browserPopupRedirectResolver,
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut, 
@@ -24,11 +29,21 @@ import {
   getDoc,
   setDoc,
   disableNetwork,
-  enableNetwork
+  enableNetwork,
+  setLogLevel
 } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import firebaseAppletConfig from '../firebase-applet-config.json';
 import { setCachedData, CACHE_KEYS } from './services/cacheService';
+import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from './supabase';
+import { mapAppointmentToSupabaseRow, mapReviewToSupabaseRow, mapSupabaseReviewToReviewItem } from './services/unifiedBackend';
+
+// Suppress non-critical Firestore connection warnings
+try {
+  setLogLevel('error');
+} catch {
+  // Ignore if already configured
+}
 
 const firebaseConfig = {
   apiKey: firebaseAppletConfig.apiKey,
@@ -51,7 +66,8 @@ try {
     {
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
-      })
+      }),
+      experimentalAutoDetectLongPolling: true
     },
     databaseId === '(default)' ? undefined : databaseId
   );
@@ -61,7 +77,22 @@ try {
 }
 
 export const db = firestoreInstance;
-export const auth = getAuth(app);
+
+let authInstance: any;
+try {
+  authInstance = getAuth(app);
+} catch (authErr) {
+  try {
+    authInstance = initializeAuth(app, {
+      persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
+      popupRedirectResolver: browserPopupRedirectResolver,
+    });
+  } catch (_e) {
+    authInstance = getAuth(app);
+  }
+}
+
+export const auth = authInstance;
 export const storage = getStorage(app);
 
 /**
@@ -160,6 +191,30 @@ export async function syncUserProfile(user: User): Promise<void> {
             assignedAt: serverTimestamp()
           }, { merge: true });
         }
+
+        // Dual-sync user profile to Supabase
+        if (isSupabaseConfigured()) {
+          try {
+            await (getSupabase().from('users') as any).upsert({
+              id: user.uid,
+              email: user.email || '',
+              display_name: user.displayName || '',
+              photo_url: user.photoURL || '',
+              role: isAdminEmail ? 'admin' : 'client',
+              updated_at: new Date().toISOString()
+            });
+            if (isAdminEmail) {
+              await (getSupabase().from('admins') as any).upsert({
+                id: user.uid,
+                email: user.email,
+                role: 'admin',
+                updated_at: new Date().toISOString()
+              });
+            }
+          } catch (supaErr) {
+            console.warn('[Supabase] syncUserProfile dual-sync error:', supaErr);
+          }
+        }
       } catch (err) {
         console.warn('Could not sync user profile:', err);
       }
@@ -185,6 +240,33 @@ export async function checkIsAdmin(user: User | null): Promise<boolean> {
 
   return withTimeout(
     (async () => {
+      // Check Supabase if configured
+      if (isSupabaseConfigured()) {
+        try {
+          const { data } = await (getSupabase().from('admins') as any)
+            .select('*')
+            .or(`id.eq.${user.uid},email.eq.${userEmail}`)
+            .maybeSingle();
+
+          if (data && (data.role === 'admin' || data.role === 'superadmin')) {
+            verifiedAdminUids.add(user.uid);
+            return true;
+          }
+
+          const { data: userData } = await (getSupabase().from('users') as any)
+            .select('role')
+            .eq('id', user.uid)
+            .maybeSingle();
+
+          if (userData && (userData.role === 'admin' || userData.role === 'superadmin')) {
+            verifiedAdminUids.add(user.uid);
+            return true;
+          }
+        } catch (supaErr) {
+          console.warn('[Supabase] checkIsAdmin fallback to Firestore:', supaErr);
+        }
+      }
+
       try {
         const adminDoc = await getDoc(doc(db, 'admins', user.uid));
         if (adminDoc.exists()) {
@@ -276,6 +358,19 @@ export async function saveAppointment(appointmentData: Omit<StoredAppointment, '
       createdAt: serverTimestamp(),
       status: appointmentData.status || 'pending'
     });
+
+    if (isSupabaseConfigured()) {
+      try {
+        const supaRow = mapAppointmentToSupabaseRow({
+          ...appointmentData,
+          id: docRef.id
+        });
+        await (getSupabase().from('appointments') as any).upsert(supaRow);
+      } catch (supaErr) {
+        console.warn('[Supabase] saveAppointment sync error:', supaErr);
+      }
+    }
+
     return docRef.id;
   } catch (error) {
     console.error('Error saving appointment:', error);
@@ -284,6 +379,35 @@ export async function saveAppointment(appointmentData: Omit<StoredAppointment, '
 }
 
 export async function fetchUserAppointments(userId: string): Promise<StoredAppointment[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('appointments') as any)
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (!error && data) {
+        return data.map((row: any) => ({
+          id: row.id,
+          userId: row.user_id,
+          userName: row.user_name,
+          userEmail: row.user_email,
+          phone: row.phone,
+          serviceId: row.service_id,
+          serviceName: row.service_name,
+          duration: row.duration,
+          price: row.price,
+          preferredDate: row.preferred_date,
+          preferredTime: row.preferred_time,
+          status: row.status,
+          createdAt: row.created_at
+        } as StoredAppointment));
+      }
+    } catch (supaErr) {
+      console.warn('[Supabase] fetchUserAppointments fallback to Firestore:', supaErr);
+    }
+  }
+
   try {
     const q = query(
       collection(db, 'appointments'),
@@ -307,6 +431,24 @@ export async function submitReview(reviewData: Omit<StoredReview, 'id' | 'create
       ...reviewData,
       createdAt: serverTimestamp()
     });
+
+    if (isSupabaseConfigured()) {
+      try {
+        const supaRow = mapReviewToSupabaseRow({
+          ...reviewData,
+          id: docRef.id,
+          reviewText: reviewData.comment,
+          name: reviewData.userName,
+          avatar: reviewData.userPhoto,
+          serviceUsed: reviewData.serviceTag,
+          verified: true
+        });
+        await (getSupabase().from('reviews') as any).upsert(supaRow);
+      } catch (supaErr) {
+        console.warn('[Supabase] submitReview sync error:', supaErr);
+      }
+    }
+
     return docRef.id;
   } catch (error) {
     console.error('Error submitting review:', error);
@@ -315,6 +457,51 @@ export async function submitReview(reviewData: Omit<StoredReview, 'id' | 'create
 }
 
 export function subscribeToReviews(callback: (reviews: StoredReview[]) => void) {
+  if (isSupabaseConfigured()) {
+    // Initial fetch from Supabase
+    (getSupabase().from('reviews') as any)
+      .select('*')
+      .order('created_at', { ascending: false })
+      .then(({ data, error }: any) => {
+        if (!error && data) {
+          const list: StoredReview[] = data.map((r: any) => ({
+            id: r.id,
+            userId: r.user_id,
+            userName: r.name,
+            userPhoto: r.avatar,
+            rating: r.rating,
+            comment: r.review_text,
+            serviceTag: r.service_used,
+            createdAt: r.created_at
+          }));
+          setCachedData(CACHE_KEYS.REVIEWS, list);
+          callback(list);
+        }
+      })
+      .catch(() => {});
+
+    return subscribeToSupabaseTable('reviews', async () => {
+      const { data } = await (getSupabase().from('reviews') as any)
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        const list: StoredReview[] = data.map((r: any) => ({
+          id: r.id,
+          userId: r.user_id,
+          userName: r.name,
+          userPhoto: r.avatar,
+          rating: r.rating,
+          comment: r.review_text,
+          serviceTag: r.service_used,
+          createdAt: r.created_at
+        }));
+        setCachedData(CACHE_KEYS.REVIEWS, list);
+        callback(list);
+      }
+    });
+  }
+
   try {
     return onSnapshot(collection(db, 'reviews'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({

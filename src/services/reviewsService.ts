@@ -12,6 +12,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from '../supabase';
 import { INITIAL_REVIEWS } from '../data/spaData';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
@@ -111,6 +112,37 @@ function parseTimestamp(val: any): number {
 }
 
 export async function fetchAdminReviews(): Promise<AdminReview[]> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('reviews') as any)
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        const list: AdminReview[] = data.map((d: any) => ({
+          id: d.id,
+          userId: d.user_id || '',
+          userName: d.user_name || 'Valued Guest',
+          userPhoto: d.user_photo || '',
+          rating: Number(d.rating) || 5,
+          comment: d.comment || '',
+          serviceTag: d.service_tag || '',
+          status: (d.status as ReviewStatus) || 'approved',
+          adminResponse: d.admin_response || '',
+          adminRespondedAt: d.admin_responded_at,
+          dateString: d.date_string || '',
+          verified: d.verified !== false,
+          createdAt: d.created_at,
+          updatedAt: d.updated_at
+        }));
+        setCachedData(CACHE_KEYS.REVIEWS, list);
+        return list;
+      }
+    } catch (err) {
+      console.warn('[Supabase] fetchAdminReviews fallback to Firestore:', err);
+    }
+  }
+
   try {
     const snapshot = await getDocs(REVIEWS_COLLECTION);
     if (!snapshot.empty) {
@@ -144,6 +176,14 @@ export function getInitialAdminReviews(): AdminReview[] {
 export function subscribeToAdminReviews(
   callback: (reviews: AdminReview[]) => void
 ): () => void {
+  if (isSupabaseConfigured()) {
+    fetchAdminReviews().then(callback);
+    return subscribeToSupabaseTable('reviews', async () => {
+      const updated = await fetchAdminReviews();
+      callback(updated);
+    });
+  }
+
   try {
     return onSnapshot(REVIEWS_COLLECTION, async (snapshot) => {
       if (snapshot.empty) {
@@ -180,6 +220,18 @@ export async function updateReviewStatus(id: string, status: ReviewStatus): Prom
     status,
     updatedAt: serverTimestamp()
   });
+
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('reviews') as any).update({
+        status,
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+    } catch (e) {
+      console.warn('[Supabase] updateReviewStatus sync error:', e);
+    }
+  }
+
   const current = getInitialAdminReviews();
   const updated = current.map(r => r.id === id ? { ...r, status } : r);
   setCachedData(CACHE_KEYS.REVIEWS, updated);
@@ -193,6 +245,25 @@ export async function updateReview(id: string, updates: Partial<AdminReview>): P
   };
   delete payload.id;
   await updateDoc(reviewDoc, payload);
+
+  if (isSupabaseConfigured()) {
+    try {
+      const supaUpdate: any = { updated_at: new Date().toISOString() };
+      if (updates.userName) supaUpdate.user_name = updates.userName;
+      if (updates.comment) supaUpdate.comment = updates.comment;
+      if (updates.rating) supaUpdate.rating = updates.rating;
+      if (updates.status) supaUpdate.status = updates.status;
+      if (updates.serviceTag !== undefined) supaUpdate.service_tag = updates.serviceTag;
+      if (updates.adminResponse !== undefined) supaUpdate.admin_response = updates.adminResponse;
+      if (updates.dateString !== undefined) supaUpdate.date_string = updates.dateString;
+      if (updates.verified !== undefined) supaUpdate.verified = updates.verified;
+
+      await (getSupabase().from('reviews') as any).update(supaUpdate).eq('id', id);
+    } catch (e) {
+      console.warn('[Supabase] updateReview sync error:', e);
+    }
+  }
+
   const current = getInitialAdminReviews();
   const updated = current.map(r => r.id === id ? { ...r, ...updates } : r);
   setCachedData(CACHE_KEYS.REVIEWS, updated);
@@ -212,6 +283,27 @@ export async function createAdminReview(data: Omit<AdminReview, 'id' | 'createdA
     updatedAt: serverTimestamp()
   };
   const docRef = await addDoc(REVIEWS_COLLECTION, payload);
+
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('reviews') as any).upsert({
+        id: docRef.id,
+        user_name: payload.userName,
+        user_photo: payload.userPhoto,
+        rating: payload.rating,
+        comment: payload.comment,
+        service_tag: payload.serviceTag,
+        status: payload.status,
+        verified: payload.verified,
+        date_string: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn('[Supabase] createAdminReview sync error:', e);
+    }
+  }
+
   const current = getInitialAdminReviews();
   setCachedData(CACHE_KEYS.REVIEWS, [{ ...payload, id: docRef.id }, ...current]);
   return docRef.id;
@@ -224,6 +316,19 @@ export async function saveAdminResponse(id: string, adminResponse: string): Prom
     adminRespondedAt: serverTimestamp(),
     updatedAt: serverTimestamp()
   });
+
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('reviews') as any).update({
+        admin_response: adminResponse.trim(),
+        admin_responded_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }).eq('id', id);
+    } catch (e) {
+      console.warn('[Supabase] saveAdminResponse sync error:', e);
+    }
+  }
+
   const current = getInitialAdminReviews();
   const updated = current.map(r => r.id === id ? { ...r, adminResponse: adminResponse.trim() } : r);
   setCachedData(CACHE_KEYS.REVIEWS, updated);
@@ -232,6 +337,15 @@ export async function saveAdminResponse(id: string, adminResponse: string): Prom
 export async function deleteReview(id: string): Promise<void> {
   const reviewDoc = doc(db, 'reviews', id);
   await deleteDoc(reviewDoc);
+
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('reviews') as any).delete().eq('id', id);
+    } catch (e) {
+      console.warn('[Supabase] deleteReview sync error:', e);
+    }
+  }
+
   const current = getInitialAdminReviews();
   const updated = current.filter(r => r.id !== id);
   setCachedData(CACHE_KEYS.REVIEWS, updated);

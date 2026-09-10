@@ -6,6 +6,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from '../supabase';
 import { SPA_INFO } from '../data/spaData';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
 
@@ -66,6 +67,29 @@ export const DEFAULT_ABOUT_CONTENT: AboutContent = {
 const ABOUT_DOC_REF = doc(db, 'siteSettings', 'about');
 
 export async function fetchAboutContent(): Promise<AboutContent> {
+  if (isSupabaseConfigured()) {
+    try {
+      const { data, error } = await (getSupabase().from('site_settings') as any)
+        .select('data')
+        .eq('id', 'about')
+        .maybeSingle();
+
+      if (!error && data?.data) {
+        const merged: AboutContent = {
+          ...DEFAULT_ABOUT_CONTENT,
+          ...data.data,
+          highlights: Array.isArray(data.data.highlights) && data.data.highlights.length > 0
+            ? data.data.highlights
+            : DEFAULT_ABOUT_CONTENT.highlights
+        };
+        setCachedData(CACHE_KEYS.ABOUT, merged);
+        return merged;
+      }
+    } catch (supaErr) {
+      console.warn('[Supabase] fetchAboutContent fallback to Firestore:', supaErr);
+    }
+  }
+
   try {
     const snap = await getDoc(ABOUT_DOC_REF);
     if (snap.exists()) {
@@ -104,6 +128,14 @@ export function getInitialAboutContent(): AboutContent {
 }
 
 export function subscribeToAboutContent(callback: (content: AboutContent) => void): () => void {
+  if (isSupabaseConfigured()) {
+    fetchAboutContent().then(callback);
+    return subscribeToSupabaseTable('site_settings', async () => {
+      const updated = await fetchAboutContent();
+      callback(updated);
+    });
+  }
+
   try {
     return onSnapshot(ABOUT_DOC_REF, (snap) => {
       if (snap.exists()) {
@@ -140,6 +172,19 @@ export async function updateAboutContent(content: AboutContent, updatedBy?: stri
 
   // Update local cache immediately
   setCachedData(CACHE_KEYS.ABOUT, merged);
+
+  if (isSupabaseConfigured()) {
+    try {
+      await (getSupabase().from('site_settings') as any).upsert({
+        id: 'about',
+        data: merged,
+        updated_at: new Date().toISOString(),
+        updated_by: updatedBy || 'admin'
+      });
+    } catch (supaErr) {
+      console.warn('[Supabase] updateAboutContent sync error:', supaErr);
+    }
+  }
 
   await setDoc(ABOUT_DOC_REF, {
     ...merged,

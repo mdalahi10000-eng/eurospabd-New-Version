@@ -1,0 +1,303 @@
+[
+  {
+    "_id": "euro_spa_center",
+    "lastSyncedAt": "2026-09-07T00:01:16.641Z",
+    "locationId": "ChIJBXYo6tfHVTcR1ZOGYIsTHt4",
+    "reviewsCount": 48,
+    "rating": 4.9,
+    "reviews": [
+      {
+        "rating": 5,
+        "serviceUsed": "Full Body Massage",
+        "id": "rev-1",
+        "name": "Rifat Ahmed",
+        "date": "3 days ago",
+        "reviewText": "Very relaxing environment and professional staff. Highly recommended!",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "verified": true
+      },
+      {
+        "reviewText": "One of the best spa experiences in Banani. Will visit again!",
+        "serviceUsed": "Swedish Massage",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "verified": true,
+        "rating": 5,
+        "id": "rev-2",
+        "date": "1 week ago",
+        "name": "Mahima Islam"
+      },
+      {
+        "verified": true,
+        "serviceUsed": "Deep Tissue Massage",
+        "name": "Tanzid Hasan",
+        "date": "2 weeks ago",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "id": "rev-3",
+        "rating": 5,
+        "reviewText": "Clean, peaceful and very professional service. Loved it!"
+      },
+      {
+        "serviceUsed": "Swedish Massage",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "name": "Sarah Jenkins",
+        "date": "3 weeks ago",
+        "verified": true,
+        "rating": 5,
+        "id": "rev-4",
+        "reviewText": "Living in Gulshan/Banani, I was searching for an immaculate, truly tranquil spa. The Swedish massage was world-class. Pristine sheets and calming ambient music."
+      },
+      {
+        "name": "Farhan Kabir",
+        "date": "1 month ago",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "reviewText": "Booked a 90-minute Hot Stone massage after a hectic business trip. The warmth of the stones relieved weeks of stiffness. 100% worth every taka.",
+        "serviceUsed": "Hot Stone Massage",
+        "verified": true,
+        "rating": 5,
+        "id": "rev-5"
+      },
+      {
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "serviceUsed": "Aromatherapy Massage",
+        "verified": true,
+        "date": "1 month ago",
+        "name": "Nusrat Jahan",
+        "reviewText": "The hygiene standards are exceptional! Private washroom, disposable slippers, and courteous reception. The aromatherapy oils smelled celestial.",
+        "id": "rev-6",
+        "rating": 5
+      },
+      {
+        "reviewText": "Great to have Euro Spa Center on Road 6 in Banani with proper certified therapists. Very convenient booking via WhatsApp and prompt confirmation.",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "date": "1 month ago",
+        "name": "Adnan Chowdhury",
+        "verified": true,
+        "id": "rev-7",
+        "rating": 5,
+        "serviceUsed": "Deep Tissue Massage"
+      },
+      {
+        "reviewText": "The Thai Herbal Compress gave me immediate relief from lower back ache. Beautiful decor with warm soothing lighting. Felt deeply revitalized!",
+        "id": "rev-8",
+        "date": "2 months ago",
+        "rating": 5,
+        "name": "Sabrina Rahman",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "verified": true,
+        "serviceUsed": "Thai Herbal Compress Therapy"
+      },
+      {
+        "verified": true,
+        "reviewText": "Super clean rooms and complete privacy on Road 6 Banani. Loved the herbal tea served right after the session. Highly recommended!",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "id": "rev-9",
+        "rating": 5,
+        "serviceUsed": "Full Body Massage",
+        "date": "2 months ago",
+        "name": "Kazi Asif"
+      },
+      {
+        "name": "Tasnim Anjum",
+        "date": "2 months ago",
+        "id": "rev-10",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "rating": 5,
+        "verified": true,
+        "reviewText": "My mom and I booked a duo session for Swedish massage. The therapists were respectful, gentle, and very attentive to our comfort levels.",
+        "serviceUsed": "Swedish Massage"
+      },
+      {
+        "verified": true,
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "reviewText": "Convenient location on Road 6, Banani. Staff escorted me inside promptly. Excellent massage and peaceful atmosphere.",
+        "date": "3 months ago",
+        "name": "Zubair Khan",
+        "id": "rev-11",
+        "rating": 5,
+        "serviceUsed": "Full Body Massage"
+      },
+      {
+        "date": "3 months ago",
+        "name": "Sadia Parveen",
+        "id": "rev-12",
+        "rating": 5,
+        "verified": true,
+        "serviceUsed": "Aromatherapy Massage",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "reviewText": "A true oasis in the middle of Banani. You forget the city noise the minute you step inside Euro Spa Center. The soothing scents are therapeutic."
+      },
+      {
+        "id": "rev-13",
+        "date": "3 months ago",
+        "name": "Shahriar Hossain",
+        "serviceUsed": "Deep Tissue Massage",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "rating": 5,
+        "reviewText": "The deep tissue pressure was dialed in precisely. My desk-job shoulder tension completely melted away. Will definitely be a regular here.",
+        "verified": true
+      },
+      {
+        "id": "rev-14",
+        "rating": 5,
+        "verified": true,
+        "reviewText": "The warm foot reflexology scrub is heavenly! Left my feet feeling baby soft and walking felt lighter instantly.",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "serviceUsed": "Foot Reflexology & Botanical Scrub",
+        "date": "4 months ago",
+        "name": "Ayesha Siddiqua"
+      },
+      {
+        "reviewText": "Booked an evening appointment around 7:00 PM. Welcoming reception, pristine towels, and pure professionalism throughout.",
+        "verified": true,
+        "id": "rev-15",
+        "rating": 5,
+        "serviceUsed": "Full Body Massage",
+        "date": "4 months ago",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "name": "Imran Haque"
+      },
+      {
+        "verified": true,
+        "rating": 5,
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "id": "rev-16",
+        "reviewText": "One of the best spa experiences in Banani, hands down. The heated massage beds make all the difference in relaxing muscles.",
+        "serviceUsed": "Swedish Massage",
+        "date": "4 months ago",
+        "name": "Nabila Karim"
+      },
+      {
+        "rating": 5,
+        "id": "rev-17",
+        "reviewText": "Great customer care, courteous team, and clean private shower room. 5 stars for Euro Spa Center without hesitation.",
+        "name": "Mohammad Tareq",
+        "date": "5 months ago",
+        "serviceUsed": "Hot Stone Massage",
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "verified": true
+      },
+      {
+        "id": "rev-18",
+        "reviewText": "The hot stone therapy was soothing and magical. The therapists are certified and observe strict hygienic protocols.",
+        "rating": 5,
+        "date": "5 months ago",
+        "name": "Samira Akhtar",
+        "serviceUsed": "Hot Stone Massage",
+        "verified": true,
+        "avatar": "https://lh3.googleusercontent.com/a/default-user"
+      },
+      {
+        "rating": 5,
+        "id": "rev-19",
+        "name": "Arifur Rahman",
+        "date": "5 months ago",
+        "serviceUsed": "Full Body Massage",
+        "verified": true,
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "reviewText": "Convenient location on 73 Road 6, Banani. The rooms are spotless, tranquil, and comfortable."
+      },
+      {
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "verified": true,
+        "id": "rev-20",
+        "serviceUsed": "Aromatherapy Massage",
+        "reviewText": "Remarkable attention to detail from the warm reception to the lavender wipe. Truly a relaxing haven in Banani.",
+        "name": "Mehnaz Latif",
+        "date": "6 months ago",
+        "rating": 5
+      },
+      {
+        "reviewText": "Visited twice already this month. Consistent quality, warm therapists, and prompt booking via WhatsApp.",
+        "verified": true,
+        "rating": 5,
+        "avatar": "https://lh3.googleusercontent.com/a/default-user",
+        "id": "rev-21",
+        "date": "6 months ago",
+        "name": "Tanvir Ahmed",
+        "serviceUsed": "Deep Tissue Massage"
+      }
+    ],
+    "photos": [
+      {
+        "caption": "Welcoming therapists and courteous reception team at Euro Spa Center, Road 6, Banani.",
+        "title": "Euro Spa Center - Reception & Professional Team",
+        "fallbackImage": "https://images.fresha.com/locations/location-profile-images/3078419/6606373/bf6dbe8d-a1bb-43c0-a36a-444b4488cbfa-EuroSpaCenter-BD-DhakaDivision-Dhaka-Gulshan-Fresha.jpg?class=venue-gallery-large",
+        "category": "Ambience",
+        "id": "user-photo-new-1",
+        "image": "/photos/new (1).jpg"
+      },
+      {
+        "title": "Euro Spa Center - Therapy Preparation & Setup",
+        "category": "Facilities",
+        "caption": "Therapist prepares massage table at Euro Spa Center, creating a clean and calm ambiance.",
+        "fallbackImage": "https://images.fresha.com/locations/location-profile-images/3078419/6606376/6c4d7161-b109-48b1-a18b-a0229c27e418-EuroSpaCenter-BD-DhakaDivision-Dhaka-Gulshan-Fresha.jpg?class=venue-gallery-large",
+        "image": "/photos/Image Aug.png",
+        "id": "user-photo-image-aug"
+      },
+      {
+        "caption": "Relaxing two-bed room with white sheets and cyan runners in a purple ambient room.",
+        "title": "Euro Spa Center - Twin Therapy Suite",
+        "category": "Rooms",
+        "id": "user-photo-euroo",
+        "image": "/photos/euroo.png",
+        "fallbackImage": "https://images.fresha.com/locations/location-profile-images/3078419/6606368/87e75dff-9ad8-4d19-9ff1-2226a94ec0c6-EuroSpaCenter-BD-DhakaDivision-Dhaka-Gulshan-Fresha.jpg?class=venue-gallery-large"
+      },
+      {
+        "fallbackImage": "https://images.fresha.com/locations/location-profile-images/3078419/6606369/08671ee0-a030-4fb2-98b6-ad2c4e69f7a2-EuroSpaCenter-BD-DhakaDivision-Dhaka-Gulshan-Fresha.jpg?class=venue-gallery-large",
+        "image": "/photos/euroo11.png",
+        "caption": "Tranquil massage room with cozy bed, ornate golden wallpaper, and patterned runner.",
+        "title": "Euro Spa Center - Ornate Golden VIP Suite",
+        "category": "Rooms",
+        "id": "user-photo-euroo11"
+      },
+      {
+        "title": "Euro Spa Center - Twin Massage Beds & Seating",
+        "category": "Rooms",
+        "fallbackImage": "https://images.fresha.com/locations/location-profile-images/3078419/6606372/b031a51d-f965-442f-91ed-7926b5d56992-EuroSpaCenter-BD-DhakaDivision-Dhaka-Gulshan-Fresha.jpg?class=venue-gallery-large",
+        "id": "user-photo-euros",
+        "caption": "Cozy spa room with two massage beds and armchairs at Euro Spa Center, Banani.",
+        "image": "/photos/euros.png"
+      },
+      {
+        "id": "user-photo-3r333",
+        "category": "Rooms",
+        "caption": "Tranquil therapy room with comfortable bed, ideal for relaxation at Euro Spa Center.",
+        "image": "/photos/3r333.png",
+        "title": "Euro Spa Center - Serene Haven Spa Room",
+        "fallbackImage": "https://images.fresha.com/locations/location-profile-images/3078419/6606371/e8f6836a-ddd0-4280-b380-fc92a093ddde-EuroSpaCenter-BD-DhakaDivision-Dhaka-Gulshan-Fresha.jpg?class=venue-gallery-large"
+      },
+      {
+        "image": "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w1200-h800-k-no",
+        "caption": "Euro Spa Center welcoming reception and serene wellness lounge on Road 6, Banani.",
+        "category": "Ambience",
+        "title": "Euro Spa Center Reception & Wellness Suite",
+        "id": "euro-gbp-reception"
+      },
+      {
+        "id": "euro-gbp-room-1",
+        "category": "Rooms",
+        "title": "Private Therapy Room & Massage Bed",
+        "image": "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+        "caption": "Spacious, peaceful private therapy room prepared for professional massage sessions."
+      },
+      {
+        "caption": "Hygienic and comfortable environment designed for stress relief and deep relaxation.",
+        "id": "euro-gbp-room-2",
+        "image": "https://lh3.googleusercontent.com/geougc/AF1QipMfFcEWQskswYvq9pqc2q9710n5SDABSA0t7nuN=w1200-h800-k-no",
+        "title": "Relaxation Lounge & Therapy Suite",
+        "category": "Rooms"
+      },
+      {
+        "image": "/photos/amenities.jpg",
+        "fallbackImage": "https://images.fresha.com/locations/location-profile-images/3078419/6606374/9265cde4-8bbf-40e3-84d0-dd5310acb293-EuroSpaCenter-BD-DhakaDivision-Dhaka-Gulshan-Fresha.jpg?class=venue-gallery-large",
+        "caption": "Hygienic facilities, modern amenities, and clean botanical essentials at Euro Spa Center.",
+        "id": "euro-gbp-facility",
+        "category": "Facilities",
+        "title": "Treatment Room & Wellness Amenities"
+      }
+    ],
+    "isGoogleConnected": true,
+    "connectedAccountEmail": "mdalahi10000@gmail.com",
+    "businessName": "Euro Spa Center"
+  }
+]
