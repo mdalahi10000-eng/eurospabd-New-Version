@@ -427,7 +427,7 @@ export function AdminGalleryImageEditorModal({
                 {isUploading && uploadProgress !== null && (
                   <div className="mt-2 space-y-1">
                     <div className="flex justify-between text-xs font-semibold text-blue-700">
-                      <span>Uploading to Firebase Storage...</span>
+                      <span>Uploading to Supabase Storage...</span>
                       <span>{uploadProgress}%</span>
                     </div>
                     <div className="w-full h-2 bg-blue-100 rounded-full overflow-hidden">

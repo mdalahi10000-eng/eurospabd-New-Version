@@ -251,12 +251,13 @@ export async function logoutUser(): Promise<void> {
 }
 
 /**
- * Upload image to Supabase Storage bucket ('spa-assets')
+ * Upload image to Supabase Storage bucket 'spa-assets'
  */
 export async function uploadToSupabaseStorage(
   folder: 'services' | 'articles' | 'gallery' | string,
   fileName: string,
-  file: File | Blob
+  file: File | Blob,
+  bucketName: string = 'spa-assets'
 ): Promise<{ url: string | null; path: string | null; error: any }> {
   try {
     if (!isSupabaseConfigured()) {
@@ -283,6 +284,64 @@ export async function uploadToSupabaseStorage(
   } catch (err: any) {
     console.error('[Supabase Storage] Upload error:', err);
     return { url: null, path: null, error: err };
+  }
+}
+
+/**
+ * Upload gallery photo directly to the 'spa-assets' Supabase Storage bucket
+ */
+export async function uploadGalleryToSupabaseStorage(
+  fileName: string,
+  file: File | Blob,
+  subFolder: string = 'gallery'
+): Promise<{ url: string | null; path: string | null; error: any }> {
+  try {
+    if (!isSupabaseConfigured()) {
+      return { 
+        url: null, 
+        path: null, 
+        error: new Error('Supabase Storage is not configured. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.') 
+      };
+    }
+    const client = getSupabase();
+    const cleanFileName = fileName.replace(/[^\w.-]/g, '_');
+    const filePath = `${subFolder}/${Date.now()}_${cleanFileName}`;
+
+    const { data, error: uploadError } = await client.storage
+      .from('spa-assets')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true,
+      });
+
+    if (uploadError) throw uploadError;
+
+    const { data: publicUrlData } = client.storage
+      .from('spa-assets')
+      .getPublicUrl(filePath);
+
+    return { url: publicUrlData.publicUrl, path: filePath, error: null };
+  } catch (err: any) {
+    console.error('[Supabase Storage] Gallery upload error:', err);
+    return { url: null, path: null, error: err };
+  }
+}
+
+/**
+ * Delete an object from Supabase Storage bucket 'spa-assets'
+ */
+export async function deleteFromSupabaseStorage(
+  bucketName: string = 'spa-assets',
+  filePath: string
+): Promise<{ error: any }> {
+  try {
+    if (!isSupabaseConfigured()) return { error: null };
+    const client = getSupabase();
+    await client.storage.from(bucketName).remove([filePath]);
+    return { error: null };
+  } catch (err) {
+    console.warn('[Supabase Storage] Delete error:', err);
+    return { error: err };
   }
 }
 

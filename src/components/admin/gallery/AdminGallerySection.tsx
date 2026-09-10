@@ -70,7 +70,7 @@ export function AdminGallerySection({ currentUser }: AdminGallerySectionProps) {
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Load all images from Firestore
+  // Load all images from database
   const loadImages = async () => {
     setRefreshing(true);
     try {
@@ -78,7 +78,7 @@ export function AdminGallerySection({ currentUser }: AdminGallerySectionProps) {
       setImages(data);
     } catch (err: any) {
       console.error('Error fetching gallery photos:', err);
-      showToast('Failed to load gallery photos from Firestore.');
+      showToast('Failed to load gallery photos.');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -167,7 +167,7 @@ export function AdminGallerySection({ currentUser }: AdminGallerySectionProps) {
       setDeletingImage(null);
     } catch (err: any) {
       console.error('Error deleting photo:', err);
-      showToast('Error deleting photo from Firestore/Storage.');
+      showToast('Error deleting photo.');
     } finally {
       setIsDeleting(false);
     }
@@ -423,7 +423,7 @@ export function AdminGallerySection({ currentUser }: AdminGallerySectionProps) {
       {loading ? (
         <div className="p-12 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">
           <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-xs font-medium">Loading gallery assets from Firestore...</p>
+          <p className="text-xs font-medium">Loading gallery assets...</p>
         </div>
       ) : filteredImages.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-2xl border border-slate-200">
@@ -679,7 +679,7 @@ export function AdminGallerySection({ currentUser }: AdminGallerySectionProps) {
             <div>
               <h3 className="font-bold text-sm text-slate-900">Delete Photo?</h3>
               <p className="text-xs text-slate-500 mt-1">
-                Are you sure you want to permanently delete <strong className="text-slate-800">"{deletingImage.title}"</strong>? This will remove it from the public website and Firestore.
+                Are you sure you want to permanently delete <strong className="text-slate-800">"{deletingImage.title}"</strong>? This will remove it from the public website and gallery database.
               </p>
             </div>
 

@@ -12,14 +12,13 @@ import {
   writeBatch,
   onSnapshot
 } from 'firebase/firestore';
+import { db, auth, checkIsAdmin } from '../firebase';
 import { 
-  ref, 
-  uploadBytesResumable, 
-  getDownloadURL, 
-  deleteObject 
-} from 'firebase/storage';
-import { db, storage, auth, checkIsAdmin } from '../firebase';
-import { isSupabaseConfigured, getSupabase, uploadToSupabaseStorage, subscribeToSupabaseTable } from '../supabase';
+  isSupabaseConfigured, 
+  getSupabase, 
+  deleteFromSupabaseStorage, 
+  subscribeToSupabaseTable 
+} from '../supabase';
 import { mapSupabaseGalleryToGallery, mapGalleryToSupabaseRow } from './unifiedBackend';
 import { PhotoItem, GalleryImage } from '../types';
 import { PHOTOS_DATA, SPA_INFO } from '../data/spaData';
@@ -97,7 +96,7 @@ export function mapStaticPhotoToGalleryImage(photo: PhotoItem, index: number): G
 }
 
 /**
- * Upload image file to Firebase Storage under `gallery/{imageId}/{cleanFilename}`
+ * Upload image file to Supabase Storage under bucket `spa-assets`
  */
 export async function uploadGalleryFile(
   file: File,
@@ -112,73 +111,68 @@ export async function uploadGalleryFile(
   mimeType: string;
 }> {
   // Validate MIME type
-  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+  const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'image/svg+xml'];
   if (!allowedMimeTypes.includes(file.type)) {
-    throw new Error('Unsupported image format. Please upload WebP, JPEG, or PNG images.');
+    throw new Error('Unsupported image format. Please upload WebP, JPEG, PNG, or SVG images.');
+  }
+
+  // Validate Supabase is configured
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured. Please ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set.');
   }
 
   // Generate SEO-friendly sanitized filename
   const seoFileName = generateSeoImageFilename(titleForSeo || file.name, file.name);
+  const cleanFileName = seoFileName.replace(/[^\w.-]/g, '_');
+  const filePath = `gallery/${imageId}/${Date.now()}_${cleanFileName}`;
 
-  if (isSupabaseConfigured()) {
-    try {
-      const res = await uploadToSupabaseStorage(`gallery/${imageId}`, seoFileName, file);
-      if (res.url) {
-        if (onProgress) onProgress(100);
-        return {
-          downloadUrl: res.url,
-          storagePath: res.path,
-          fileName: seoFileName,
-          fileSize: file.size,
-          mimeType: file.type
-        };
-      }
-    } catch (supaErr) {
-      console.warn('[Supabase Storage] upload fallback to Firebase Storage:', supaErr);
+  // Smooth progressive upload UI feedback
+  if (onProgress) onProgress(15);
+  let currentPct = 15;
+  const progressInterval = setInterval(() => {
+    if (currentPct < 90) {
+      currentPct += Math.floor(Math.random() * 15) + 5;
+      if (currentPct > 90) currentPct = 90;
+      if (onProgress) onProgress(currentPct);
     }
+  }, 100);
+
+  try {
+    const client = getSupabase();
+
+    // Upload directly to the existing public 'spa-assets' bucket
+    const { data, error: uploadError } = await client.storage
+      .from('spa-assets')
+      .upload(filePath, file, {
+        cacheControl: '3600',
+        upsert: true,
+        contentType: file.type,
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    // Generate public URL from the spa-assets bucket
+    const { data: publicUrlData } = client.storage
+      .from('spa-assets')
+      .getPublicUrl(filePath);
+
+    clearInterval(progressInterval);
+    if (onProgress) onProgress(100);
+
+    return {
+      downloadUrl: publicUrlData.publicUrl,
+      storagePath: filePath,
+      fileName: seoFileName,
+      fileSize: file.size,
+      mimeType: file.type
+    };
+  } catch (err: any) {
+    clearInterval(progressInterval);
+    console.error('[Supabase Storage] Gallery upload error:', err);
+    throw new Error(err.message || 'Failed to upload image to Supabase Storage.');
   }
-
-  const storagePath = `gallery/${imageId}/${Date.now()}_${seoFileName}`;
-  const storageRef = ref(storage, storagePath);
-
-  return new Promise((resolve, reject) => {
-    const uploadTask = uploadBytesResumable(storageRef, file, {
-      contentType: file.type,
-      customMetadata: {
-        originalName: file.name,
-        seoName: seoFileName,
-        uploadedBy: auth.currentUser?.email || 'admin'
-      }
-    });
-
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        if (onProgress && snapshot.totalBytes > 0) {
-          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          onProgress(progress);
-        }
-      },
-      (error) => {
-        console.error('Firebase Storage gallery upload error:', error);
-        reject(new Error(error.message || 'Failed to upload image to Firebase Storage.'));
-      },
-      async () => {
-        try {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve({
-            downloadUrl,
-            storagePath,
-            fileName: seoFileName,
-            fileSize: file.size,
-            mimeType: file.type
-          });
-        } catch (err) {
-          reject(err);
-        }
-      }
-    );
-  });
 }
 
 /**
@@ -436,13 +430,12 @@ export async function deleteGalleryImage(id: string, storagePath?: string): Prom
   const current = getInitialGallery();
   setCachedData(CACHE_KEYS.GALLERY, current.filter(img => img.id !== id));
 
-  // 2. Delete Storage file if uploaded
-  if (storagePath) {
+  // 2. Delete Supabase Storage file if uploaded
+  if (storagePath && isSupabaseConfigured()) {
     try {
-      const storageRef = ref(storage, storagePath);
-      await deleteObject(storageRef);
+      await deleteFromSupabaseStorage('spa-assets', storagePath);
     } catch (e) {
-      console.warn('Storage file deletion notice:', e);
+      console.warn('[Supabase Storage] Storage file deletion notice:', e);
     }
   }
 }
@@ -463,4 +456,19 @@ export async function reorderGalleryImages(orderedIds: string[]): Promise<void> 
   });
 
   await batch.commit();
+
+  if (isSupabaseConfigured()) {
+    try {
+      const client = getSupabase();
+      await Promise.all(
+        orderedIds.map((id, index) =>
+          (client.from('gallery') as any)
+            .update({ display_order: index, updated_at: now })
+            .eq('id', id)
+        )
+      );
+    } catch (err) {
+      console.warn('[Supabase] reorderGalleryImages sync error:', err);
+    }
+  }
 }
