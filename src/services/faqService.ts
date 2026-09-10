@@ -1,18 +1,3 @@
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  orderBy, 
-  serverTimestamp,
-  writeBatch,
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../firebase';
 import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from '../supabase';
 import { mapSupabaseFaqToFAQItem, mapFaqToSupabaseRow } from './unifiedBackend';
 import { FAQItem } from '../types';
@@ -77,11 +62,6 @@ export const INITIAL_FAQS: Omit<FAQItem, 'createdAt' | 'updatedAt'>[] = [
   }
 ];
 
-const FAQS_COLLECTION = 'faqs';
-
-/**
- * Returns the latest synchronously available active FAQs (from cache if available)
- */
 export function getInitialFAQs(): FAQItem[] {
   const cached = getCachedData<FAQItem[]>(CACHE_KEYS.FAQS);
   if (cached && Array.isArray(cached) && cached.length > 0) {
@@ -91,226 +71,86 @@ export function getInitialFAQs(): FAQItem[] {
 }
 
 export async function fetchAllFAQs(): Promise<FAQItem[]> {
-  try {
-    const q = query(collection(db, FAQS_COLLECTION), orderBy('displayOrder', 'asc'));
-    const snap = await getDocs(q);
-
-    if (snap.empty) {
-      return INITIAL_FAQS as FAQItem[];
-    }
-
-    const list: FAQItem[] = [];
-    snap.forEach((d) => {
-      const data = d.data();
-      list.push({
-        id: d.id,
-        question: data.question || '',
-        answer: data.answer || '',
-        category: data.category || 'General',
-        displayOrder: typeof data.displayOrder === 'number' ? data.displayOrder : list.length + 1,
-        status: data.status || 'active',
-        createdAt: data.createdAt,
-        updatedAt: data.updatedAt
-      });
-    });
-
-    return list.sort((a, b) => a.displayOrder - b.displayOrder);
-  } catch (err) {
-    console.warn('Error fetching all FAQs from Firestore:', err);
+  if (!isSupabaseConfigured()) {
     return INITIAL_FAQS as FAQItem[];
   }
+
+  try {
+    const { data, error } = await (getSupabase().from('faqs') as any)
+      .select('*')
+      .order('sort_order', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      return data.map(mapSupabaseFaqToFAQItem);
+    }
+  } catch (err) {
+    console.warn('[Supabase] fetchAllFAQs error:', err);
+  }
+
+  return INITIAL_FAQS as FAQItem[];
 }
 
 export async function fetchPublicFAQs(): Promise<FAQItem[]> {
-  try {
-    const all = await fetchAllFAQs();
-    const active = all.filter(f => f.status === 'active');
-    if (active.length > 0) {
-      setCachedData(CACHE_KEYS.FAQS, active);
-    }
-    return active;
-  } catch (err) {
-    console.warn('Error fetching public FAQs:', err);
-    return getInitialFAQs();
-  }
+  return await fetchActiveFAQs();
 }
 
 export async function fetchActiveFAQs(): Promise<FAQItem[]> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('faqs') as any)
-        .select('*')
-        .eq('status', 'active')
-        .order('sort_order', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        const list = data.map(mapSupabaseFaqToFAQItem);
-        setCachedData(CACHE_KEYS.FAQS, list);
-        return list;
-      }
-    } catch (err) {
-      console.warn('[Supabase] fetchActiveFAQs fallback to Firestore:', err);
-    }
+  if (!isSupabaseConfigured()) {
+    return (INITIAL_FAQS as FAQItem[]).filter(f => f.status === 'active');
   }
 
   try {
-    const q = query(collection(db, FAQS_COLLECTION), orderBy('displayOrder', 'asc'));
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-      const list: FAQItem[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data();
-        if (data.status !== 'inactive') {
-          list.push({
-            id: d.id,
-            question: data.question || '',
-            answer: data.answer || '',
-            category: data.category || 'General',
-            displayOrder: typeof data.displayOrder === 'number' ? data.displayOrder : list.length + 1,
-            status: data.status || 'active',
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt
-          });
-        }
-      });
-      const sorted = list.sort((a, b) => a.displayOrder - b.displayOrder);
-      setCachedData(CACHE_KEYS.FAQS, sorted);
-      return sorted;
+    const { data, error } = await (getSupabase().from('faqs') as any)
+      .select('*')
+      .eq('status', 'active')
+      .order('sort_order', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      const list = data.map(mapSupabaseFaqToFAQItem);
+      setCachedData(CACHE_KEYS.FAQS, list);
+      return list;
     }
   } catch (err) {
-    console.warn('fetchActiveFAQs Firestore error:', err);
+    console.warn('[Supabase] fetchActiveFAQs error:', err);
   }
 
-  return getInitialFAQs();
+  return (INITIAL_FAQS as FAQItem[]).filter(f => f.status === 'active');
 }
 
 export function subscribeToActiveFAQs(callback: (items: FAQItem[]) => void): () => void {
-  if (isSupabaseConfigured()) {
-    fetchActiveFAQs().then(callback);
-    return subscribeToSupabaseTable('faqs', async () => {
-      const updated = await fetchActiveFAQs();
-      callback(updated);
-    });
-  }
-
-  const q = query(collection(db, FAQS_COLLECTION), orderBy('displayOrder', 'asc'));
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      if (snapshot.empty) {
-        const initial = getInitialFAQs();
-        callback(initial);
-        return;
-      }
-      const list: FAQItem[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data();
-        if (data.status !== 'inactive') {
-          list.push({
-            id: d.id,
-            question: data.question || '',
-            answer: data.answer || '',
-            category: data.category || 'General',
-            displayOrder: typeof data.displayOrder === 'number' ? data.displayOrder : list.length + 1,
-            status: data.status || 'active',
-            createdAt: data.createdAt,
-            updatedAt: data.updatedAt
-          });
-        }
-      });
-      const sorted = list.sort((a, b) => a.displayOrder - b.displayOrder);
-      setCachedData(CACHE_KEYS.FAQS, sorted);
-      callback(sorted);
-    },
-    (error) => {
-      console.warn('Firestore onSnapshot error in subscribeToActiveFAQs:', error);
-      callback(getInitialFAQs());
-    }
-  );
+  fetchActiveFAQs().then(callback);
+  return subscribeToSupabaseTable('faqs', async () => {
+    const updated = await fetchActiveFAQs();
+    callback(updated);
+  });
 }
 
 export function subscribeToAllFAQs(callback: (items: FAQItem[]) => void): () => void {
-  if (isSupabaseConfigured()) {
-    (async () => {
-      try {
-        const { data, error } = await (getSupabase().from('faqs') as any)
-          .select('*')
-          .order('sort_order', { ascending: true });
-        if (!error && data) {
-          callback(data.map(mapSupabaseFaqToFAQItem));
-        }
-      } catch (err) {
-        console.warn('[Supabase] subscribeToAllFAQs initial fetch error:', err);
-      }
-    })();
-
-    return subscribeToSupabaseTable('faqs', async () => {
-      try {
-        const { data, error } = await (getSupabase().from('faqs') as any)
-          .select('*')
-          .order('sort_order', { ascending: true });
-        if (!error && data) {
-          callback(data.map(mapSupabaseFaqToFAQItem));
-        }
-      } catch (err) {
-        console.warn('[Supabase] subscribeToAllFAQs update error:', err);
-      }
-    });
-  }
-
-  const q = query(collection(db, FAQS_COLLECTION), orderBy('displayOrder', 'asc'));
-  return onSnapshot(
-    q,
-    (snapshot) => {
-      if (snapshot.empty) {
-        callback(INITIAL_FAQS as FAQItem[]);
-        return;
-      }
-      const list: FAQItem[] = [];
-      snapshot.forEach((d) => {
-        const data = d.data();
-        list.push({
-          id: d.id,
-          question: data.question || '',
-          answer: data.answer || '',
-          category: data.category || 'General',
-          displayOrder: typeof data.displayOrder === 'number' ? data.displayOrder : list.length + 1,
-          status: data.status || 'active',
-          createdAt: data.createdAt,
-          updatedAt: data.updatedAt
-        });
-      });
-      callback(list.sort((a, b) => a.displayOrder - b.displayOrder));
-    },
-    (error) => {
-      console.warn('Firestore onSnapshot error in subscribeToAllFAQs:', error);
-      callback(INITIAL_FAQS as FAQItem[]);
-    }
-  );
+  fetchAllFAQs().then(callback);
+  return subscribeToSupabaseTable('faqs', async () => {
+    const updated = await fetchAllFAQs();
+    callback(updated);
+  });
 }
 
 export async function createFAQ(faq: Omit<FAQItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   const id = `faq-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
-  const ref = doc(db, FAQS_COLLECTION, id);
+  const now = new Date().toISOString();
   const newFaq: FAQItem = {
     ...faq,
     id,
     displayOrder: faq.displayOrder ?? 99,
-    status: faq.status || 'active'
+    status: faq.status || 'active',
+    createdAt: now,
+    updatedAt: now
   };
-  await setDoc(ref, {
-    ...newFaq,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp()
-  });
 
-  if (isSupabaseConfigured()) {
-    try {
-      const supaRow = mapFaqToSupabaseRow(newFaq);
-      await (getSupabase().from('faqs') as any).upsert(supaRow);
-    } catch (err) {
-      console.warn('[Supabase] createFAQ sync error:', err);
-    }
+  const client = getSupabase();
+  const supaRow = mapFaqToSupabaseRow(newFaq);
+  const { error } = await (client.from('faqs') as any).upsert(supaRow);
+  if (error) {
+    console.error('[Supabase] createFAQ error:', error);
+    throw new Error(error.message || 'Failed to create FAQ.');
   }
 
   const current = getInitialFAQs();
@@ -319,19 +159,12 @@ export async function createFAQ(faq: Omit<FAQItem, 'id' | 'createdAt' | 'updated
 }
 
 export async function updateFAQ(id: string, updates: Partial<Omit<FAQItem, 'id' | 'createdAt'>>): Promise<void> {
-  const ref = doc(db, FAQS_COLLECTION, id);
-  await updateDoc(ref, {
-    ...updates,
-    updatedAt: serverTimestamp()
-  });
-
-  if (isSupabaseConfigured()) {
-    try {
-      const supaRow = mapFaqToSupabaseRow({ ...updates, id } as any);
-      await (getSupabase().from('faqs') as any).update(supaRow).eq('id', id);
-    } catch (err) {
-      console.warn('[Supabase] updateFAQ sync error:', err);
-    }
+  const client = getSupabase();
+  const supaRow = mapFaqToSupabaseRow({ ...updates, id } as any);
+  const { error } = await (client.from('faqs') as any).update(supaRow).eq('id', id);
+  if (error) {
+    console.error('[Supabase] updateFAQ error:', error);
+    throw new Error(error.message || 'Failed to update FAQ.');
   }
 
   const current = getInitialFAQs();
@@ -340,15 +173,11 @@ export async function updateFAQ(id: string, updates: Partial<Omit<FAQItem, 'id' 
 }
 
 export async function deleteFAQ(id: string): Promise<void> {
-  const ref = doc(db, FAQS_COLLECTION, id);
-  await deleteDoc(ref);
-
-  if (isSupabaseConfigured()) {
-    try {
-      await (getSupabase().from('faqs') as any).delete().eq('id', id);
-    } catch (err) {
-      console.warn('[Supabase] deleteFAQ sync error:', err);
-    }
+  const client = getSupabase();
+  const { error } = await (client.from('faqs') as any).delete().eq('id', id);
+  if (error) {
+    console.error('[Supabase] deleteFAQ error:', error);
+    throw new Error(error.message || 'Failed to delete FAQ.');
   }
 
   const current = getInitialFAQs();
@@ -361,37 +190,36 @@ export async function toggleFAQStatus(id: string, currentStatus: 'active' | 'ina
 }
 
 export async function reorderFAQs(orderedItems: { id: string; displayOrder: number }[]): Promise<void> {
-  const batch = writeBatch(db);
-  orderedItems.forEach(item => {
-    const ref = doc(db, FAQS_COLLECTION, item.id);
-    batch.update(ref, {
-      displayOrder: item.displayOrder,
-      updatedAt: serverTimestamp()
-    });
-  });
-  await batch.commit();
+  const client = getSupabase();
+  const now = new Date().toISOString();
+  await Promise.all(
+    orderedItems.map(item =>
+      (client.from('faqs') as any)
+        .update({ sort_order: item.displayOrder, updated_at: now })
+        .eq('id', item.id)
+    )
+  );
 }
 
 export async function seedInitialFAQsIfEmpty(): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
   try {
-    const snap = await getDocs(collection(db, FAQS_COLLECTION));
-    if (!snap.empty) {
-      return false; // Already has items
+    const client = getSupabase();
+    const { data: existing } = await (client.from('faqs') as any).select('id').limit(1);
+    if (existing && existing.length > 0) {
+      return false;
     }
 
-    const batch = writeBatch(db);
-    INITIAL_FAQS.forEach(faq => {
-      const ref = doc(db, FAQS_COLLECTION, faq.id);
-      batch.set(ref, {
-        ...faq,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-    });
-    await batch.commit();
+    const rows = INITIAL_FAQS.map(faq => mapFaqToSupabaseRow({
+      ...faq,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }));
+
+    await (client.from('faqs') as any).upsert(rows);
     return true;
   } catch (err) {
-    console.warn('Error seeding initial FAQs:', err);
+    console.warn('Error seeding initial FAQs into Supabase:', err);
     return false;
   }
 }

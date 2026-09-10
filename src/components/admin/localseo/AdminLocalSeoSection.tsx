@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User } from 'firebase/auth';
+import { User } from '../../../supabase';
 import { 
   MapPin, 
   Search, 

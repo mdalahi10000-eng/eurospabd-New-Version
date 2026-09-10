@@ -1,11 +1,12 @@
 import { ChevronRight, Star, PenLine } from 'lucide-react';
 import { INITIAL_REVIEWS } from '../data/spaData';
-import { StoredReview } from '../firebase';
+import { StoredReview } from '../supabase';
 import { ReviewItem } from '../types';
 
 interface ReviewsSectionProps {
   onOpenReviewsModal: () => void;
   onWriteReviewClick: () => void;
+  communityReviews?: StoredReview[];
   firebaseReviews?: StoredReview[];
   syncedReviews?: ReviewItem[];
   loading?: boolean;
@@ -14,17 +15,19 @@ interface ReviewsSectionProps {
 export function ReviewsSection({ 
   onOpenReviewsModal, 
   onWriteReviewClick,
+  communityReviews,
   firebaseReviews = [],
   syncedReviews,
   loading = false
 }: ReviewsSectionProps) {
+  const activeReviews = communityReviews || firebaseReviews;
   const baseReviews = (syncedReviews && syncedReviews.length > 0) ? syncedReviews : INITIAL_REVIEWS;
 
-  // Filter approved Firestore reviews
-  const approvedFirebase = firebaseReviews
+  // Filter approved Supabase reviews
+  const approvedLive = activeReviews
     .filter(r => (r as any).status !== 'hidden')
     .map(r => ({
-      id: r.id || 'fb-1',
+      id: r.id || 'rev-1',
       name: r.userName,
       avatar: r.userPhoto || 'https://lh3.googleusercontent.com/a/default-user',
       rating: r.rating || 5,
@@ -32,12 +35,12 @@ export function ReviewsSection({
       adminResponse: (r as any).adminResponse
     }));
 
-  const allFirebaseIds = new Set(firebaseReviews.map(r => r.id));
-  const remainingBase = baseReviews.filter(b => !allFirebaseIds.has(b.id));
+  const allLiveIds = new Set(activeReviews.map(r => r.id));
+  const remainingBase = baseReviews.filter(b => !allLiveIds.has(b.id));
 
-  // If Firebase reviews are loaded/cached, use them as the primary source of truth
-  const liveReviews = firebaseReviews.length > 0 
-    ? approvedFirebase 
+  // If reviews are loaded/cached, prioritize approved live reviews followed by base reviews
+  const liveReviews = approvedLive.length > 0 
+    ? [...approvedLive, ...remainingBase] 
     : baseReviews;
   const topReviews = liveReviews.slice(0, 3);
 

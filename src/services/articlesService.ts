@@ -1,20 +1,9 @@
 import { 
-  collection, 
-  getDocs, 
-  getDoc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query, 
-  where, 
-  limit,
-  serverTimestamp,
-  onSnapshot
-} from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage, withTimeout } from '../firebase';
-import { isSupabaseConfigured, getSupabase, uploadToSupabaseStorage, subscribeToSupabaseTable } from '../supabase';
+  isSupabaseConfigured, 
+  getSupabase, 
+  uploadToSupabaseStorage, 
+  subscribeToSupabaseTable 
+} from '../supabase';
 import { mapSupabaseArticleToArticle, mapArticleToSupabaseRow } from './unifiedBackend';
 import { Article } from '../types';
 import { SERVICES_DATA, PHOTOS_DATA } from '../data/spaData';
@@ -41,125 +30,83 @@ export function calculateReadingTime(content: string): number {
 }
 
 /**
- * Check if a slug is already taken by another article
+ * Check if a slug is already taken by another article in Supabase
  */
 export async function checkSlugAvailability(slug: string, excludeId?: string): Promise<boolean> {
   if (!slug) return false;
+  if (!isSupabaseConfigured()) return true;
   try {
-    const q = query(collection(db, 'articles'), where('slug', '==', slug));
-    const snap = await getDocs(q);
-    if (snap.empty) return true;
-    if (excludeId && snap.docs.length === 1 && snap.docs[0].id === excludeId) {
+    const { data, error } = await (getSupabase().from('articles') as any)
+      .select('id')
+      .eq('slug', slug);
+
+    if (error || !data || data.length === 0) return true;
+    if (excludeId && data.length === 1 && data[0].id === excludeId) {
       return true;
     }
     return false;
   } catch (err) {
     console.warn('Error checking slug availability:', err);
-    return true; // Fallback to allow submission
+    return true;
   }
 }
 
 /**
- * Upload an article featured image to Firebase Storage (with Supabase Storage support)
+ * Upload an article featured image to Supabase Storage
  */
 export async function uploadArticleImage(
   file: File, 
   onProgress?: (percentage: number) => void
 ): Promise<string> {
-  const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-
-  if (isSupabaseConfigured()) {
-    try {
-      const res = await uploadToSupabaseStorage('articles', sanitizedName, file);
-      if (res.url) {
-        if (onProgress) onProgress(100);
-        return res.url;
-      }
-    } catch (supaErr) {
-      console.warn('[Supabase Storage] article image upload fallback:', supaErr);
-    }
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured.');
   }
 
-  // Clean filename and add timestamp
-  const storagePath = `articles/${Date.now()}_${sanitizedName}`;
-  const storageRef = ref(storage, storagePath);
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  if (onProgress) onProgress(20);
 
-  return new Promise((resolve, reject) => {
-    const uploadTask = uploadBytesResumable(storageRef, file, {
-      contentType: file.type || 'image/jpeg',
-    });
+  const res = await uploadToSupabaseStorage('articles', sanitizedName, file);
+  if (!res.url) {
+    throw new Error('Failed to upload image to Supabase Storage.');
+  }
 
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        if (onProgress && snapshot.totalBytes > 0) {
-          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          onProgress(progress);
-        }
-      },
-      (error) => {
-        console.error('Firebase Storage upload error:', error);
-        reject(new Error(error.message || 'Failed to upload image to Firebase Storage.'));
-      },
-      async () => {
-        try {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadUrl);
-        } catch (err) {
-          reject(err);
-        }
-      }
-    );
-  });
+  if (onProgress) onProgress(100);
+  return res.url;
 }
 
 /**
  * Fetch all articles (both Draft and Published) for the Admin CMS
  */
 export async function fetchAllArticlesAdmin(): Promise<Article[]> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('articles') as any)
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!error && data && data.length > 0) {
-        return data.map(mapSupabaseArticleToArticle);
-      }
-    } catch (err) {
-      console.warn('[Supabase] fetchAllArticlesAdmin fallback to Firestore:', err);
-    }
+  if (!isSupabaseConfigured()) {
+    return [];
   }
 
   try {
-    const snap = await getDocs(collection(db, 'articles'));
-    if (!snap.empty) {
-      const list = snap.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      } as Article));
+    const { data, error } = await (getSupabase().from('articles') as any)
+      .select('*')
+      .order('created_at', { ascending: false });
 
-      // Sort by updatedAt or createdAt desc
-      return list.sort((a, b) => {
-        const timeA = new Date(a.updatedAt || a.publishedAt || (a.createdAt?.toDate ? a.createdAt.toDate() : 0)).getTime();
-        const timeB = new Date(b.updatedAt || b.publishedAt || (b.createdAt?.toDate ? b.createdAt.toDate() : 0)).getTime();
-        return timeB - timeA;
-      });
+    if (!error && data && data.length > 0) {
+      return data.map(mapSupabaseArticleToArticle);
     }
   } catch (err) {
-    console.error('Error fetching admin articles:', err);
+    console.warn('[Supabase] fetchAllArticlesAdmin error:', err);
   }
+
   return [];
 }
 
 /**
- * Create a new article in Firestore
+ * Create a new article in Supabase
  */
 export async function createArticle(data: Omit<Article, 'id'>): Promise<string> {
   const readingTime = calculateReadingTime(data.content);
   const nowStr = new Date().toISOString();
+  const id = `art_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-  const articlePayload = {
+  const articlePayload: Article = {
+    id,
     title: data.title.trim(),
     slug: data.slug.trim(),
     excerpt: data.excerpt.trim(),
@@ -171,7 +118,6 @@ export async function createArticle(data: Omit<Article, 'id'>): Promise<string> 
     status: data.status || 'draft',
     publishedAt: data.publishedAt || (data.status === 'published' ? new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : ''),
     updatedAt: nowStr,
-    createdAt: serverTimestamp(),
     seoTitle: data.seoTitle?.trim() || `${data.title.trim()} | Euro Spa Center Banani`,
     metaDescription: data.metaDescription?.trim() || data.excerpt.trim(),
     focusKeyword: data.focusKeyword?.trim() || '',
@@ -183,31 +129,27 @@ export async function createArticle(data: Omit<Article, 'id'>): Promise<string> 
     readingTimeMinutes: readingTime
   };
 
-  const docRef = await addDoc(collection(db, 'articles'), articlePayload);
+  const client = getSupabase();
+  const supaRow = mapArticleToSupabaseRow(articlePayload);
+  const { error } = await (client.from('articles') as any).upsert(supaRow);
 
-  if (isSupabaseConfigured()) {
-    try {
-      const supaRow = mapArticleToSupabaseRow({ ...articlePayload, id: docRef.id } as any);
-      await (getSupabase().from('articles') as any).upsert(supaRow);
-    } catch (err) {
-      console.warn('[Supabase] createArticle sync error:', err);
-    }
+  if (error) {
+    console.error('[Supabase] createArticle error:', error);
+    throw new Error(error.message || 'Failed to create article in Supabase.');
   }
 
   if (articlePayload.status === 'published') {
     const current = getInitialArticles();
-    setCachedData(CACHE_KEYS.ARTICLES, [{ ...articlePayload, id: docRef.id }, ...current]);
+    setCachedData(CACHE_KEYS.ARTICLES, [articlePayload, ...current]);
   }
-  return docRef.id;
+  return id;
 }
 
 /**
- * Update an existing article in Firestore
+ * Update an existing article in Supabase
  */
 export async function updateArticle(id: string, updates: Partial<Article>): Promise<void> {
-  const articleRef = doc(db, 'articles', id);
   const nowStr = new Date().toISOString();
-
   const cleanedUpdates: any = {
     ...updates,
     updatedAt: nowStr
@@ -217,22 +159,19 @@ export async function updateArticle(id: string, updates: Partial<Article>): Prom
     cleanedUpdates.readingTimeMinutes = calculateReadingTime(updates.content);
   }
 
-  // Remove undefined fields
   Object.keys(cleanedUpdates).forEach(key => {
     if (cleanedUpdates[key] === undefined) {
       delete cleanedUpdates[key];
     }
   });
 
-  await updateDoc(articleRef, cleanedUpdates);
+  const client = getSupabase();
+  const supaRow = mapArticleToSupabaseRow({ ...cleanedUpdates, id } as any);
+  const { error } = await (client.from('articles') as any).update(supaRow).eq('id', id);
 
-  if (isSupabaseConfigured()) {
-    try {
-      const supaRow = mapArticleToSupabaseRow({ ...cleanedUpdates, id } as any);
-      await (getSupabase().from('articles') as any).update(supaRow).eq('id', id);
-    } catch (err) {
-      console.warn('[Supabase] updateArticle sync error:', err);
-    }
+  if (error) {
+    console.error('[Supabase] updateArticle error:', error);
+    throw new Error(error.message || 'Failed to update article in Supabase.');
   }
 
   const current = getInitialArticles();
@@ -244,18 +183,15 @@ export async function updateArticle(id: string, updates: Partial<Article>): Prom
 }
 
 /**
- * Delete an article from Firestore
+ * Delete an article from Supabase
  */
 export async function deleteArticle(id: string): Promise<void> {
-  const articleRef = doc(db, 'articles', id);
-  await deleteDoc(articleRef);
+  const client = getSupabase();
+  const { error } = await (client.from('articles') as any).delete().eq('id', id);
 
-  if (isSupabaseConfigured()) {
-    try {
-      await (getSupabase().from('articles') as any).delete().eq('id', id);
-    } catch (err) {
-      console.warn('[Supabase] deleteArticle sync error:', err);
-    }
+  if (error) {
+    console.error('[Supabase] deleteArticle error:', error);
+    throw new Error(error.message || 'Failed to delete article.');
   }
 
   const current = getInitialArticles();
@@ -271,7 +207,6 @@ export async function toggleArticlePublish(article: Article): Promise<'draft' | 
     status: newStatus
   };
 
-  // If publishing for the first time or missing publishedAt, populate it
   if (newStatus === 'published' && !article.publishedAt) {
     updates.publishedAt = new Date().toLocaleDateString('en-US', { 
       year: 'numeric', 
@@ -299,136 +234,59 @@ export function getInitialArticles(): Article[] {
  * Real-time listener for published articles with automatic cache synchronization
  */
 export function subscribeToPublishedArticles(callback: (articles: Article[]) => void): () => void {
-  if (isSupabaseConfigured()) {
-    fetchPublishedArticles().then(callback);
-    return subscribeToSupabaseTable('articles', async () => {
-      const updated = await fetchPublishedArticles();
-      callback(updated);
-    });
-  }
-
-  try {
-    const q = query(
-      collection(db, 'articles'),
-      where('status', '==', 'published')
-    );
-    return onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const list = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        } as Article));
-
-        const sorted = list.sort((a, b) => {
-          const timeA = new Date(a.publishedAt || (a.createdAt?.toDate ? a.createdAt.toDate() : 0)).getTime();
-          const timeB = new Date(b.publishedAt || (b.createdAt?.toDate ? b.createdAt.toDate() : 0)).getTime();
-          return timeB - timeA;
-        });
-
-        setCachedData(CACHE_KEYS.ARTICLES, sorted);
-        callback(sorted);
-      } else {
-        const initial = getInitialArticles();
-        callback(initial);
-      }
-    }, (err) => {
-      console.warn('subscribeToPublishedArticles onSnapshot notice:', err);
-      const fallback = getInitialArticles();
-      callback(fallback);
-    });
-  } catch (err) {
-    console.warn('Error subscribing to published articles:', err);
-    return () => {};
-  }
+  fetchPublishedArticles().then(callback);
+  return subscribeToSupabaseTable('articles', async () => {
+    const updated = await fetchPublishedArticles();
+    callback(updated);
+  });
 }
 
 /**
- * Fetch all published articles from Firestore.
- * Strictly queries Firebase Firestore without creating fake articles.
- * Returns an empty array if there are currently no published articles.
+ * Fetch all published articles from Supabase
  */
 export async function fetchPublishedArticles(): Promise<Article[]> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('articles') as any)
-        .select('*')
-        .eq('status', 'published')
-        .order('published_at', { ascending: false });
-
-      if (!error && data && data.length > 0) {
-        const list = data.map(mapSupabaseArticleToArticle);
-        setCachedData(CACHE_KEYS.ARTICLES, list);
-        return list;
-      }
-    } catch (err) {
-      console.warn('[Supabase] fetchPublishedArticles fallback to Firestore:', err);
-    }
+  if (!isSupabaseConfigured()) {
+    return getInitialArticles();
   }
 
   try {
-    const q = query(
-      collection(db, 'articles'),
-      where('status', '==', 'published')
-    );
-    const snapshot = await getDocs(q);
-    
-    if (!snapshot.empty) {
-      const list = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      } as Article));
+    const { data, error } = await (getSupabase().from('articles') as any)
+      .select('*')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false });
 
-      const sorted = list.sort((a, b) => {
-        const timeA = new Date(a.publishedAt || (a.createdAt?.toDate ? a.createdAt.toDate() : 0)).getTime();
-        const timeB = new Date(b.publishedAt || (b.createdAt?.toDate ? b.createdAt.toDate() : 0)).getTime();
-        return timeB - timeA;
-      });
-
-      setCachedData(CACHE_KEYS.ARTICLES, sorted);
-      return sorted;
+    if (!error && data && data.length > 0) {
+      const list = data.map(mapSupabaseArticleToArticle);
+      setCachedData(CACHE_KEYS.ARTICLES, list);
+      return list;
     }
   } catch (err) {
-    console.warn('Firestore articles query notice:', err);
+    console.warn('[Supabase] fetchPublishedArticles error:', err);
   }
 
   return getInitialArticles();
 }
 
 /**
- * Fetch a single published article by its SEO-friendly slug.
- * Draft or unpublished articles will return null and are not publicly accessible.
+ * Fetch a single published article by its SEO-friendly slug
  */
 export async function fetchArticleBySlug(slug: string): Promise<Article | null> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('articles') as any)
-        .select('*')
-        .eq('slug', slug)
-        .eq('status', 'published')
-        .maybeSingle();
-
-      if (!error && data) {
-        return mapSupabaseArticleToArticle(data);
-      }
-    } catch (err) {
-      console.warn('[Supabase] fetchArticleBySlug fallback to Firestore:', err);
-    }
+  if (!isSupabaseConfigured()) {
+    return null;
   }
 
   try {
-    const q = query(
-      collection(db, 'articles'),
-      where('slug', '==', slug),
-      where('status', '==', 'published'),
-      limit(1)
-    );
-    const snapshot = await getDocs(q);
-    if (!snapshot.empty) {
-      const doc = snapshot.docs[0];
-      return { id: doc.id, ...doc.data() } as Article;
+    const { data, error } = await (getSupabase().from('articles') as any)
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .maybeSingle();
+
+    if (!error && data) {
+      return mapSupabaseArticleToArticle(data);
     }
   } catch (err) {
-    console.warn('Article query error for slug:', slug, err);
+    console.warn('[Supabase] fetchArticleBySlug error:', err);
   }
 
   return null;
@@ -465,7 +323,7 @@ export interface AdminStats {
 }
 
 /**
- * Fetch real statistics for the Admin Dashboard from Firestore
+ * Fetch real statistics for the Admin Dashboard from Supabase
  */
 export async function fetchAdminStats(): Promise<AdminStats> {
   let totalAppointments = 0;
@@ -476,91 +334,91 @@ export async function fetchAdminStats(): Promise<AdminStats> {
   let averageRating = 4.9;
   let publishedArticles = 0;
   let totalArticles = 0;
+  let totalServices = SERVICES_DATA.length;
+  let galleryImages = PHOTOS_DATA.length;
   let recentAppointments: any[] = [];
   let recentReviews: any[] = [];
 
-  try {
-    const appointmentsSnap = await withTimeout(getDocs(collection(db, 'appointments')), 3000, null as any);
-    if (appointmentsSnap) {
-      totalAppointments = appointmentsSnap.size;
-      const allAppts = appointmentsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as any));
-      
-      // Sort recent if timestamp exists
-      allAppts.sort((a: any, b: any) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
+  if (!isSupabaseConfigured()) {
+    return {
+      totalServices,
+      totalAppointments,
+      pendingAppointments,
+      confirmedAppointments,
+      totalReviews,
+      approvedReviews,
+      averageRating,
+      publishedArticles,
+      totalArticles,
+      galleryImages,
+      recentAppointments,
+      recentReviews
+    };
+  }
 
-      recentAppointments = allAppts.slice(0, 5);
-      allAppts.forEach((a: any) => {
+  const client = getSupabase();
+
+  try {
+    const { data: appts } = await (client.from('appointments') as any)
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (appts) {
+      totalAppointments = appts.length;
+      recentAppointments = appts.slice(0, 5);
+      appts.forEach((a: any) => {
         if (a.status === 'pending') pendingAppointments++;
         else if (a.status === 'confirmed') confirmedAppointments++;
       });
     }
   } catch (e) {
-    console.warn('Appointments count notice:', e);
+    console.warn('Appointments stats notice:', e);
   }
 
   try {
-    const reviewsSnap = await withTimeout(getDocs(collection(db, 'reviews')), 3000, null as any);
-    if (reviewsSnap) {
-      totalReviews = reviewsSnap.size;
-      const allRevs = reviewsSnap.docs.map((d: any) => ({ id: d.id, ...d.data() } as any));
-      
+    const { data: revs } = await (client.from('reviews') as any)
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (revs) {
+      totalReviews = revs.length;
       let sumRate = 0;
-      allRevs.forEach((r: any) => {
+      revs.forEach((r: any) => {
         if (r.status !== 'hidden') approvedReviews++;
         sumRate += typeof r.rating === 'number' ? r.rating : 5;
       });
-
-      if (allRevs.length > 0) {
-        averageRating = parseFloat((sumRate / allRevs.length).toFixed(1));
+      if (revs.length > 0) {
+        averageRating = parseFloat((sumRate / revs.length).toFixed(1));
       }
-
-      allRevs.sort((a: any, b: any) => {
-        const timeA = a.createdAt?.seconds || 0;
-        const timeB = b.createdAt?.seconds || 0;
-        return timeB - timeA;
-      });
-      recentReviews = allRevs.slice(0, 4);
+      recentReviews = revs.slice(0, 4);
     }
   } catch (e) {
-    console.warn('Reviews count notice:', e);
+    console.warn('Reviews stats notice:', e);
   }
 
   try {
-    const allArticlesSnap = await withTimeout(getDocs(collection(db, 'articles')), 3000, null as any);
-    if (allArticlesSnap) {
-      totalArticles = allArticlesSnap.size;
-      const pubSnap = await withTimeout(
-        getDocs(query(collection(db, 'articles'), where('status', '==', 'published'))),
-        3000,
-        null as any
-      );
-      if (pubSnap) {
-        publishedArticles = pubSnap.size;
-      }
+    const { data: arts } = await (client.from('articles') as any).select('id, status');
+    if (arts) {
+      totalArticles = arts.length;
+      publishedArticles = arts.filter((a: any) => a.status === 'published').length;
     }
   } catch (e) {
-    console.warn('Articles count notice:', e);
+    console.warn('Articles stats notice:', e);
   }
 
-  let totalServices = SERVICES_DATA.length;
   try {
-    const servicesSnap = await withTimeout(getDocs(collection(db, 'services')), 3000, null as any);
-    if (servicesSnap && !servicesSnap.empty) {
-      totalServices = servicesSnap.size;
+    const { data: svcs } = await (client.from('services') as any).select('id');
+    if (svcs && svcs.length > 0) {
+      totalServices = svcs.length;
     }
   } catch (e) {
     console.warn('Services count notice:', e);
   }
 
-  let galleryImages = PHOTOS_DATA.length;
   try {
-    const gallerySnap = await withTimeout(getDocs(collection(db, 'gallery')), 3000, null as any);
-    if (gallerySnap && !gallerySnap.empty) {
-      galleryImages = gallerySnap.size;
+    const { data: gal } = await (client.from('gallery') as any).select('id');
+    if (gal && gal.length > 0) {
+      galleryImages = gal.length;
     }
   } catch (e) {
     console.warn('Gallery count notice:', e);

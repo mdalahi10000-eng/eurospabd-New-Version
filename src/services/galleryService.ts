@@ -1,23 +1,9 @@
 import { 
-  collection, 
-  getDocs, 
-  getDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query, 
-  where, 
-  serverTimestamp,
-  writeBatch,
-  onSnapshot
-} from 'firebase/firestore';
-import { db, auth, checkIsAdmin } from '../firebase';
-import { 
   isSupabaseConfigured, 
   getSupabase, 
   deleteFromSupabaseStorage, 
-  subscribeToSupabaseTable 
+  subscribeToSupabaseTable,
+  checkIsAdmin
 } from '../supabase';
 import { mapSupabaseGalleryToGallery, mapGalleryToSupabaseRow } from './unifiedBackend';
 import { PhotoItem, GalleryImage } from '../types';
@@ -193,43 +179,37 @@ export async function uploadGalleryFile(
 }
 
 /**
- * Seed initial gallery from authentic PHOTOS_DATA if Firestore collection is empty
+ * Seed initial gallery from authentic PHOTOS_DATA if Supabase table is empty
  */
 export async function seedInitialGalleryIfEmpty(): Promise<GalleryImage[]> {
-  // Only allow verified admin sessions to perform automatic seeding
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
-    return PHOTOS_DATA.map((p, idx) => mapStaticPhotoToGalleryImage(p, idx));
-  }
-  const isAdmin = await checkIsAdmin(currentUser);
-  if (!isAdmin) {
+  if (!isSupabaseConfigured()) {
     return PHOTOS_DATA.map((p, idx) => mapStaticPhotoToGalleryImage(p, idx));
   }
 
   try {
-    const snap = await getDocs(collection(db, 'gallery'));
-    if (!snap.empty) {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as GalleryImage));
-      return list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+    const client = getSupabase();
+    const { data: { session } } = await client.auth.getSession();
+    if (!session) {
+      return PHOTOS_DATA.map((p, idx) => mapStaticPhotoToGalleryImage(p, idx));
+    }
+    const isAdmin = await checkIsAdmin(session.user);
+    if (!isAdmin) {
+      return PHOTOS_DATA.map((p, idx) => mapStaticPhotoToGalleryImage(p, idx));
     }
 
-    console.log('Gallery collection empty. Seeding authentic spa gallery into Firestore...');
-    const seededList: GalleryImage[] = [];
-    const batch = writeBatch(db);
+    const { data: existing, error } = await (client.from('gallery') as any).select('id').limit(1);
+    if (!error && existing && existing.length > 0) {
+      return await fetchAllGalleryAdmin();
+    }
 
-    PHOTOS_DATA.forEach((photo, idx) => {
+    console.log('Gallery table empty. Seeding authentic spa gallery into Supabase...');
+    const rows = PHOTOS_DATA.map((photo, idx) => {
       const full = mapStaticPhotoToGalleryImage(photo, idx);
-      const docRef = doc(db, 'gallery', photo.id);
-      batch.set(docRef, {
-        ...full,
-        createdAt: serverTimestamp(),
-        updatedAt: new Date().toISOString()
-      });
-      seededList.push(full);
+      return mapGalleryToSupabaseRow(full);
     });
 
-    await batch.commit();
-    return seededList;
+    await (client.from('gallery') as any).upsert(rows);
+    return await fetchAllGalleryAdmin();
   } catch (err) {
     console.warn('Seeding initial gallery notice:', err);
     return PHOTOS_DATA.map((p, idx) => mapStaticPhotoToGalleryImage(p, idx));
@@ -251,35 +231,11 @@ export function getInitialGallery(): GalleryImage[] {
  * Real-time listener for public active gallery images with automatic cache synchronization
  */
 export function subscribeToPublicGallery(callback: (images: GalleryImage[]) => void): () => void {
-  if (isSupabaseConfigured()) {
-    fetchPublicGallery().then(callback);
-    return subscribeToSupabaseTable('gallery', async () => {
-      const updated = await fetchPublicGallery();
-      callback(updated);
-    });
-  }
-
-  try {
-    const q = query(collection(db, 'gallery'), where('status', '==', 'active'));
-    return onSnapshot(q, (snap) => {
-      if (!snap.empty) {
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as GalleryImage));
-        const sorted = list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-        setCachedData(CACHE_KEYS.GALLERY, sorted);
-        callback(sorted);
-      } else {
-        const initial = getInitialGallery();
-        callback(initial);
-      }
-    }, (err) => {
-      console.warn('subscribeToPublicGallery onSnapshot notice:', err);
-      const fallback = getInitialGallery();
-      callback(fallback);
-    });
-  } catch (err) {
-    console.warn('Error subscribing to public gallery:', err);
-    return () => {};
-  }
+  fetchPublicGallery().then(callback);
+  return subscribeToSupabaseTable('gallery', async () => {
+    const updated = await fetchPublicGallery();
+    callback(updated);
+  });
 }
 
 /**
@@ -287,64 +243,43 @@ export function subscribeToPublicGallery(callback: (images: GalleryImage[]) => v
  * Inactive images are strictly filtered out
  */
 export async function fetchPublicGallery(): Promise<GalleryImage[]> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('gallery') as any)
-        .select('*')
-        .eq('status', 'active')
-        .order('display_order', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        const list = data.map(mapSupabaseGalleryToGallery);
-        setCachedData(CACHE_KEYS.GALLERY, list);
-        return list;
-      }
-    } catch (err) {
-      console.warn('[Supabase] fetchPublicGallery fallback to Firestore:', err);
-    }
+  if (!isSupabaseConfigured()) {
+    return getInitialGallery();
   }
 
   try {
-    const q = query(collection(db, 'gallery'), where('status', '==', 'active'));
-    const snap = await getDocs(q);
+    const { data, error } = await (getSupabase().from('gallery') as any)
+      .select('*')
+      .eq('status', 'active')
+      .order('display_order', { ascending: true });
 
-    if (!snap.empty) {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as GalleryImage));
-      const sorted = list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-      setCachedData(CACHE_KEYS.GALLERY, sorted);
-      return sorted;
+    if (!error && data && data.length > 0) {
+      const list = data.map(mapSupabaseGalleryToGallery);
+      setCachedData(CACHE_KEYS.GALLERY, list);
+      return list;
     }
-
-    return getInitialGallery();
   } catch (err) {
-    console.warn('Public gallery fetch notice:', err);
-    return getInitialGallery();
+    console.warn('[Supabase] fetchPublicGallery error:', err);
   }
+
+  return getInitialGallery();
 }
 
 /**
  * Fetch all gallery images for Admin CMS (includes active & inactive)
  */
 export async function fetchAllGalleryAdmin(): Promise<GalleryImage[]> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('gallery') as any)
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        return data.map(mapSupabaseGalleryToGallery);
-      }
-    } catch (err) {
-      console.warn('[Supabase] fetchAllGalleryAdmin fallback to Firestore:', err);
-    }
+  if (!isSupabaseConfigured()) {
+    return PHOTOS_DATA.map((p, idx) => mapStaticPhotoToGalleryImage(p, idx));
   }
 
   try {
-    const snap = await getDocs(collection(db, 'gallery'));
-    if (!snap.empty) {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as GalleryImage));
-      return list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+    const { data, error } = await (getSupabase().from('gallery') as any)
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      return data.map(mapSupabaseGalleryToGallery);
     }
 
     return await seedInitialGalleryIfEmpty();
@@ -355,14 +290,13 @@ export async function fetchAllGalleryAdmin(): Promise<GalleryImage[]> {
 }
 
 /**
- * Create a new gallery image document
+ * Create a new gallery image document in Supabase
  */
 export async function createGalleryImage(
   data: Omit<GalleryImage, 'id'>, 
   customId?: string
 ): Promise<string> {
   const docId = customId || `photo_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const docRef = doc(db, 'gallery', docId);
 
   const payload: GalleryImage = {
     ...data,
@@ -373,30 +307,15 @@ export async function createGalleryImage(
     caption: data.caption || '',
     description: data.description || '',
     displayOrder: data.displayOrder ?? Date.now(),
-    createdAt: serverTimestamp(),
     updatedAt: new Date().toISOString()
   };
 
-  // 1. Primary write to Supabase database
-  if (isSupabaseConfigured()) {
-    try {
-      const supaRow = mapGalleryToSupabaseRow(payload);
-      const { error: supaErr } = await (getSupabase().from('gallery') as any).upsert(supaRow);
-      if (supaErr) {
-        console.error('[Supabase] createGalleryImage error:', supaErr);
-        throw new Error(supaErr.message || 'Failed to save gallery item in Supabase.');
-      }
-    } catch (err: any) {
-      console.error('[Supabase] createGalleryImage exception:', err);
-      throw err;
-    }
-  }
-
-  // 2. Best-effort Firestore sync (non-fatal, will never throw permission denied)
-  try {
-    await setDoc(docRef, payload);
-  } catch (fsErr) {
-    console.warn('[Firestore] Sync notice (non-fatal):', fsErr);
+  const client = getSupabase();
+  const supaRow = mapGalleryToSupabaseRow(payload);
+  const { error: supaErr } = await (client.from('gallery') as any).upsert(supaRow);
+  if (supaErr) {
+    console.error('[Supabase] createGalleryImage error:', supaErr);
+    throw new Error(supaErr.message || 'Failed to save gallery item in Supabase.');
   }
 
   const current = getInitialGallery();
@@ -405,35 +324,17 @@ export async function createGalleryImage(
 }
 
 /**
- * Update gallery image metadata
+ * Update gallery image metadata in Supabase
  */
 export async function updateGalleryImage(id: string, updates: Partial<GalleryImage>): Promise<void> {
-  const docRef = doc(db, 'gallery', id);
   const nowStr = new Date().toISOString();
-
-  // 1. Primary update in Supabase database
-  if (isSupabaseConfigured()) {
-    try {
-      const supaRow = mapGalleryToSupabaseRow({ ...updates, id } as any);
-      const { error: supaErr } = await (getSupabase().from('gallery') as any).update(supaRow).eq('id', id);
-      if (supaErr) {
-        console.error('[Supabase] updateGalleryImage error:', supaErr);
-        throw new Error(supaErr.message || 'Failed to update gallery item in Supabase.');
-      }
-    } catch (err: any) {
-      console.error('[Supabase] updateGalleryImage exception:', err);
-      throw err;
-    }
-  }
-
-  // 2. Best-effort Firestore sync (non-fatal)
-  try {
-    await updateDoc(docRef, {
-      ...updates,
-      updatedAt: nowStr
-    });
-  } catch (fsErr) {
-    console.warn('[Firestore] Update notice (non-fatal):', fsErr);
+  const client = getSupabase();
+  const supaRow = mapGalleryToSupabaseRow({ ...updates, id } as any);
+  
+  const { error: supaErr } = await (client.from('gallery') as any).update(supaRow).eq('id', id);
+  if (supaErr) {
+    console.error('[Supabase] updateGalleryImage error:', supaErr);
+    throw new Error(supaErr.message || 'Failed to update gallery item in Supabase.');
   }
 
   const current = getInitialGallery();
@@ -451,38 +352,23 @@ export async function toggleGalleryImageStatus(image: GalleryImage): Promise<'ac
 }
 
 /**
- * Delete a gallery image from Supabase (and optionally storage & Firestore)
+ * Delete a gallery image from Supabase (and Supabase storage)
  */
 export async function deleteGalleryImage(id: string, storagePath?: string): Promise<void> {
-  // 1. Primary delete from Supabase database
-  if (isSupabaseConfigured()) {
-    try {
-      const { error: supaErr } = await (getSupabase().from('gallery') as any).delete().eq('id', id);
-      if (supaErr) {
-        console.error('[Supabase] deleteGalleryImage error:', supaErr);
-        throw new Error(supaErr.message || 'Failed to delete gallery item from Supabase.');
-      }
-    } catch (err: any) {
-      console.error('[Supabase] deleteGalleryImage exception:', err);
-      throw err;
-    }
+  const client = getSupabase();
+  const { error: supaErr } = await (client.from('gallery') as any).delete().eq('id', id);
+  if (supaErr) {
+    console.error('[Supabase] deleteGalleryImage error:', supaErr);
+    throw new Error(supaErr.message || 'Failed to delete gallery item from Supabase.');
   }
 
-  // 2. Delete Supabase Storage file if uploaded
-  if (storagePath && isSupabaseConfigured()) {
+  // Delete Supabase Storage file if uploaded
+  if (storagePath) {
     try {
       await deleteFromSupabaseStorage('spa-assets', storagePath);
     } catch (e) {
       console.warn('[Supabase Storage] Storage file deletion notice:', e);
     }
-  }
-
-  // 3. Best-effort Firestore delete (non-fatal)
-  try {
-    const docRef = doc(db, 'gallery', id);
-    await deleteDoc(docRef);
-  } catch (fsErr) {
-    console.warn('[Firestore] Delete notice (non-fatal):', fsErr);
   }
 
   // Proactively update cached gallery
@@ -491,39 +377,16 @@ export async function deleteGalleryImage(id: string, storagePath?: string): Prom
 }
 
 /**
- * Batch reorder gallery images
+ * Batch reorder gallery images in Supabase
  */
 export async function reorderGalleryImages(orderedIds: string[]): Promise<void> {
   const now = new Date().toISOString();
-
-  // 1. Primary reorder in Supabase database
-  if (isSupabaseConfigured()) {
-    try {
-      const client = getSupabase();
-      await Promise.all(
-        orderedIds.map((id, index) =>
-          (client.from('gallery') as any)
-            .update({ display_order: index, updated_at: now })
-            .eq('id', id)
-        )
-      );
-    } catch (err) {
-      console.warn('[Supabase] reorderGalleryImages error:', err);
-    }
-  }
-
-  // 2. Best-effort Firestore batch commit (non-fatal)
-  try {
-    const batch = writeBatch(db);
-    orderedIds.forEach((id, index) => {
-      const docRef = doc(db, 'gallery', id);
-      batch.update(docRef, {
-        displayOrder: index,
-        updatedAt: now
-      });
-    });
-    await batch.commit();
-  } catch (fsErr) {
-    console.warn('[Firestore] Batch reorder notice (non-fatal):', fsErr);
-  }
+  const client = getSupabase();
+  await Promise.all(
+    orderedIds.map((id, index) =>
+      (client.from('gallery') as any)
+        .update({ display_order: index, updated_at: now })
+        .eq('id', id)
+    )
+  );
 }

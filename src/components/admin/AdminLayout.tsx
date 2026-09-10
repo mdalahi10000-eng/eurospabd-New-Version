@@ -27,7 +27,6 @@ import {
   formatSupabaseUser, 
   AdminAuthUser 
 } from '../../supabase';
-import { recoverFirestoreNetwork } from '../../firebase';
 import { AdminLoginPage } from './AdminLoginPage';
 import { AdminAccessDeniedPage } from './AdminAccessDeniedPage';
 import { AdminSidebar, AdminSection } from './AdminSidebar';
@@ -183,9 +182,7 @@ export function AdminLayout() {
     setAuthChecking(true);
     setStartupPhase('checking');
     setStartupNotice(null);
-    recoverFirestoreNetwork().then(() => {
-      setRetryTrigger(prev => prev + 1);
-    });
+    setRetryTrigger(prev => prev + 1);
   };
 
   const handleBypassToLogin = () => {

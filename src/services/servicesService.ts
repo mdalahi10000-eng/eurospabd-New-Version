@@ -1,21 +1,9 @@
 import { 
-  collection, 
-  getDocs, 
-  getDoc,
-  addDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-  query, 
-  where, 
-  orderBy, 
-  serverTimestamp,
-  onSnapshot
-} from 'firebase/firestore';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { db, storage, auth, checkIsAdmin } from '../firebase';
-import { isSupabaseConfigured, getSupabase, uploadToSupabaseStorage, subscribeToSupabaseTable } from '../supabase';
+  isSupabaseConfigured, 
+  getSupabase, 
+  uploadToSupabaseStorage, 
+  subscribeToSupabaseTable 
+} from '../supabase';
 import { mapSupabaseServiceToService, mapServiceToSupabaseRow } from './unifiedBackend';
 import { Service, PriceOption } from '../types';
 import { SERVICES_DATA, SPA_INFO } from '../data/spaData';
@@ -35,15 +23,18 @@ export function generateServiceSlug(text: string): string {
 }
 
 /**
- * Check if a service slug is already taken in Firestore
+ * Check if a service slug is already taken in Supabase
  */
 export async function checkServiceSlugAvailability(slug: string, excludeId?: string): Promise<boolean> {
   if (!slug) return false;
+  if (!isSupabaseConfigured()) return true;
   try {
-    const q = query(collection(db, 'services'), where('slug', '==', slug));
-    const snap = await getDocs(q);
-    if (snap.empty) return true;
-    if (excludeId && snap.docs.length === 1 && snap.docs[0].id === excludeId) {
+    const { data, error } = await (getSupabase().from('services') as any)
+      .select('id')
+      .eq('slug', slug);
+
+    if (error || !data || data.length === 0) return true;
+    if (excludeId && data.length === 1 && data[0].id === excludeId) {
       return true;
     }
     return false;
@@ -54,55 +45,23 @@ export async function checkServiceSlugAvailability(slug: string, excludeId?: str
 }
 
 /**
- * Upload service featured image to Supabase Storage (primary) with Firebase Storage fallback
+ * Upload service featured image to Supabase Storage ('spa-assets' bucket)
  */
 export async function uploadServiceImage(
   file: File, 
   onProgress?: (percentage: number) => void
 ): Promise<string> {
-  if (isSupabaseConfigured()) {
-    try {
-      const res = await uploadToSupabaseStorage('services', file.name, file);
-      if (res.url) {
-        if (onProgress) onProgress(100);
-        return res.url;
-      }
-    } catch (supaErr) {
-      console.warn('[Supabase Storage] upload failed, falling back to Firebase Storage:', supaErr);
-    }
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase is not configured.');
   }
 
-  const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-  const storagePath = `services/${Date.now()}_${sanitizedName}`;
-  const storageRef = ref(storage, storagePath);
-
-  return new Promise((resolve, reject) => {
-    const uploadTask = uploadBytesResumable(storageRef, file, {
-      contentType: file.type || 'image/jpeg',
-    });
-
-    uploadTask.on(
-      'state_changed',
-      (snapshot) => {
-        if (onProgress && snapshot.totalBytes > 0) {
-          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
-          onProgress(progress);
-        }
-      },
-      (error) => {
-        console.error('Firebase Storage upload error:', error);
-        reject(new Error(error.message || 'Failed to upload image to Firebase Storage.'));
-      },
-      async () => {
-        try {
-          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
-          resolve(downloadUrl);
-        } catch (err) {
-          reject(err);
-        }
-      }
-    );
-  });
+  if (onProgress) onProgress(20);
+  const res = await uploadToSupabaseStorage('services', file.name, file);
+  if (!res.url) {
+    throw new Error('Failed to upload image to Supabase Storage.');
+  }
+  if (onProgress) onProgress(100);
+  return res.url;
 }
 
 /**
@@ -128,59 +87,46 @@ export function mapStaticServiceToFullService(svc: Service, index: number): Serv
     canonicalUrl: svc.canonicalUrl || buildCanonicalUrl(`/services/${svc.slug || generateServiceSlug(svc.name)}`),
     robotsIndex: svc.robotsIndex ?? true,
     robotsFollow: svc.robotsFollow ?? true,
-    ogTitle: svc.ogTitle || `${svc.name} | ${SPA_INFO.name} Banani`,
+    ogTitle: svc.ogTitle || `${svc.name} | ${SPA_INFO.name}`,
     ogDescription: svc.ogDescription || svc.shortDescription,
     ogImage: svc.ogImage || svc.image,
-    schemaType: svc.schemaType || 'HealthAndBeautyBusiness'
+    schemaType: svc.schemaType || 'HealthAndBeautyBusiness',
+    customSchema: svc.customSchema || '',
+    updatedAt: new Date().toISOString()
   };
 }
 
 /**
- * Seed existing authentic services into Firestore if the collection is empty.
- * This guarantees no fake services are created, and existing services are preserved.
+ * Seed initial services from authentic SERVICES_DATA if Supabase table is empty
  */
 export async function seedInitialServicesIfEmpty(): Promise<Service[]> {
-  // Only allow verified admin sessions to perform automatic seeding
-  const currentUser = auth.currentUser;
-  if (!currentUser) {
-    return SERVICES_DATA.map((s, idx) => mapStaticServiceToFullService(s, idx));
-  }
-  const isAdmin = await checkIsAdmin(currentUser);
-  if (!isAdmin) {
+  if (!isSupabaseConfigured()) {
     return SERVICES_DATA.map((s, idx) => mapStaticServiceToFullService(s, idx));
   }
 
   try {
-    const snap = await getDocs(collection(db, 'services'));
-    if (!snap.empty) {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Service));
-      return list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+    const client = getSupabase();
+    const { data: existing, error } = await (client.from('services') as any).select('id').limit(1);
+    if (!error && existing && existing.length > 0) {
+      return await fetchAllServicesAdmin();
     }
 
-    // Collection is empty, seed from authentic SERVICES_DATA
-    console.log('Services collection empty. Seeding authentic spa services into Firestore...');
-    const seededServices: Service[] = [];
-    for (let i = 0; i < SERVICES_DATA.length; i++) {
-      const base = SERVICES_DATA[i];
-      const fullSvc = mapStaticServiceToFullService(base, i);
-      const docRef = doc(db, 'services', base.id);
-      await setDoc(docRef, {
-        ...fullSvc,
-        createdAt: serverTimestamp(),
-        updatedAt: new Date().toISOString()
-      });
-      seededServices.push({ ...fullSvc, id: base.id });
-    }
-    return seededServices;
+    console.log('Services table is empty. Seeding authentic spa services into Supabase...');
+    const rows = SERVICES_DATA.map((s, idx) => {
+      const full = mapStaticServiceToFullService(s, idx);
+      return mapServiceToSupabaseRow(full);
+    });
+
+    await (client.from('services') as any).upsert(rows);
+    return await fetchAllServicesAdmin();
   } catch (err) {
     console.warn('Seeding initial services notice:', err);
-    // Fallback in-memory
     return SERVICES_DATA.map((s, idx) => mapStaticServiceToFullService(s, idx));
   }
 }
 
 /**
- * Returns the latest synchronously available active services (from cache if available)
+ * Synchronous initial services from cache or static data
  */
 export function getInitialServices(): Service[] {
   const cached = getCachedData<Service[]>(CACHE_KEYS.SERVICES);
@@ -191,109 +137,59 @@ export function getInitialServices(): Service[] {
 }
 
 /**
- * Real-time listener for active public services with automatic cache synchronization
+ * Real-time listener for public active services with automatic cache synchronization
  */
 export function subscribeToPublicServices(callback: (services: Service[]) => void): () => void {
-  if (isSupabaseConfigured()) {
-    fetchPublicServices().then(callback);
-    return subscribeToSupabaseTable('services', async () => {
-      const updated = await fetchPublicServices();
-      callback(updated);
-    });
-  }
-
-  try {
-    const q = query(collection(db, 'services'), where('status', '==', 'active'));
-    return onSnapshot(q, (snap) => {
-      if (!snap.empty) {
-        const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Service));
-        const sorted = list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-        setCachedData(CACHE_KEYS.SERVICES, sorted);
-        callback(sorted);
-      } else {
-        // Empty in Firestore, fallback to initial cached or mapped
-        const initial = getInitialServices();
-        callback(initial);
-      }
-    }, (err) => {
-      console.warn('subscribeToPublicServices onSnapshot notice:', err);
-      const fallback = getInitialServices();
-      callback(fallback);
-    });
-  } catch (err) {
-    console.warn('Error subscribing to public services:', err);
-    return () => {};
-  }
+  fetchPublicServices().then(callback);
+  return subscribeToSupabaseTable('services', async () => {
+    const updated = await fetchPublicServices();
+    callback(updated);
+  });
 }
 
 /**
- * Fetch all active services for the public website
+ * Fetch active services for public website (ordered by display order)
  */
 export async function fetchPublicServices(): Promise<Service[]> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await getSupabase()
-        .from('services')
-        .select('*')
-        .eq('status', 'active')
-        .order('display_order', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        const list = data.map(mapSupabaseServiceToService);
-        setCachedData(CACHE_KEYS.SERVICES, list);
-        return list;
-      }
-    } catch (err) {
-      console.warn('[Supabase] fetchPublicServices fallback to Firestore:', err);
-    }
+  if (!isSupabaseConfigured()) {
+    return getInitialServices();
   }
 
   try {
-    const q = query(collection(db, 'services'), where('status', '==', 'active'));
-    const snap = await getDocs(q);
+    const { data, error } = await (getSupabase().from('services') as any)
+      .select('*')
+      .eq('status', 'active')
+      .order('display_order', { ascending: true });
 
-    if (!snap.empty) {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Service));
-      const sorted = list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
-      setCachedData(CACHE_KEYS.SERVICES, sorted);
-      return sorted;
+    if (!error && data && data.length > 0) {
+      const list = data.map(mapSupabaseServiceToService);
+      setCachedData(CACHE_KEYS.SERVICES, list);
+      return list;
     }
-
-    // Collection returned empty
-    return getInitialServices();
   } catch (err) {
-    console.warn('Public services fetch notice:', err);
-    return getInitialServices();
+    console.warn('[Supabase] fetchPublicServices error:', err);
   }
+
+  return getInitialServices();
 }
 
 /**
  * Fetch all services (both Active and Inactive) for Admin CMS
  */
 export async function fetchAllServicesAdmin(): Promise<Service[]> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await getSupabase()
-        .from('services')
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        return data.map(mapSupabaseServiceToService);
-      }
-    } catch (err) {
-      console.warn('[Supabase] fetchAllServicesAdmin fallback to Firestore:', err);
-    }
+  if (!isSupabaseConfigured()) {
+    return SERVICES_DATA.map((s, idx) => mapStaticServiceToFullService(s, idx));
   }
 
   try {
-    const snap = await getDocs(collection(db, 'services'));
-    if (!snap.empty) {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() } as Service));
-      return list.sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+    const { data, error } = await (getSupabase().from('services') as any)
+      .select('*')
+      .order('display_order', { ascending: true });
+
+    if (!error && data && data.length > 0) {
+      return data.map(mapSupabaseServiceToService);
     }
 
-    // If empty, seed initial services so admin can edit them immediately
     return await seedInitialServicesIfEmpty();
   } catch (err) {
     console.error('Error fetching admin services:', err);
@@ -302,14 +198,15 @@ export async function fetchAllServicesAdmin(): Promise<Service[]> {
 }
 
 /**
- * Create a new service in Firestore
+ * Create a new service in Supabase
  */
 export async function createService(data: Omit<Service, 'id'>): Promise<string> {
-  const nowStr = new Date().toISOString();
   const slug = data.slug?.trim() || generateServiceSlug(data.name);
+  const id = `svc_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
-  const payload: any = {
+  const newService: Service = {
     ...data,
+    id,
     name: data.name.trim(),
     slug: slug,
     shortDescription: data.shortDescription.trim(),
@@ -343,80 +240,62 @@ export async function createService(data: Omit<Service, 'id'>): Promise<string> 
     ogImage: data.ogImage?.trim() || data.image || '',
     schemaType: data.schemaType?.trim() || 'HealthAndBeautyBusiness',
     customSchema: data.customSchema?.trim() || '',
-
-    updatedAt: nowStr,
-    createdAt: serverTimestamp()
+    updatedAt: new Date().toISOString()
   };
 
-  const docRef = await addDoc(collection(db, 'services'), payload);
-  const newService = { ...payload, id: docRef.id };
-
-  if (isSupabaseConfigured()) {
-    try {
-      const supaRow = mapServiceToSupabaseRow({ ...newService, id: docRef.id });
-      await (getSupabase().from('services') as any).upsert(supaRow);
-    } catch (supaErr) {
-      console.warn('[Supabase] createService sync warning:', supaErr);
-    }
+  const client = getSupabase();
+  const supaRow = mapServiceToSupabaseRow(newService);
+  const { error } = await (client.from('services') as any).upsert(supaRow);
+  if (error) {
+    console.error('[Supabase] createService error:', error);
+    throw new Error(error.message || 'Failed to create service in Supabase.');
   }
 
   const current = getInitialServices();
   setCachedData(CACHE_KEYS.SERVICES, [...current, newService]);
-  return docRef.id;
+  return id;
 }
 
 /**
- * Update an existing service in Firestore & Supabase
+ * Update an existing service in Supabase
  */
 export async function updateService(id: string, updates: Partial<Service>): Promise<void> {
-  const serviceRef = doc(db, 'services', id);
   const nowStr = new Date().toISOString();
-
   const cleanedUpdates: any = {
     ...updates,
     updatedAt: nowStr
   };
 
-  // Remove undefined properties
   Object.keys(cleanedUpdates).forEach(key => {
     if (cleanedUpdates[key] === undefined) {
       delete cleanedUpdates[key];
     }
   });
 
-  await updateDoc(serviceRef, cleanedUpdates);
-
-  if (isSupabaseConfigured()) {
-    try {
-      const supaRow = mapServiceToSupabaseRow({ ...cleanedUpdates, id });
-      await (getSupabase().from('services') as any).update(supaRow).eq('id', id);
-    } catch (supaErr) {
-      console.warn('[Supabase] updateService sync warning:', supaErr);
-    }
+  const client = getSupabase();
+  const supaRow = mapServiceToSupabaseRow({ ...cleanedUpdates, id });
+  const { error } = await (client.from('services') as any).update(supaRow).eq('id', id);
+  if (error) {
+    console.error('[Supabase] updateService error:', error);
+    throw new Error(error.message || 'Failed to update service in Supabase.');
   }
 
-  // Proactively update cached services immediately
   const current = getInitialServices();
   const updatedList = current.map(s => s.id === id ? { ...s, ...cleanedUpdates } : s);
   setCachedData(CACHE_KEYS.SERVICES, updatedList);
 }
 
 /**
- * Delete a service from Firestore & Supabase
+ * Delete a service from Supabase
  */
 export async function deleteService(id: string): Promise<void> {
-  const serviceRef = doc(db, 'services', id);
-  await deleteDoc(serviceRef);
-
-  if (isSupabaseConfigured()) {
-    try {
-      await (getSupabase().from('services') as any).delete().eq('id', id);
-    } catch (supaErr) {
-      console.warn('[Supabase] deleteService sync warning:', supaErr);
-    }
+  const client = getSupabase();
+  const { error } = await (client.from('services') as any).delete().eq('id', id);
+  if (error) {
+    console.error('[Supabase] deleteService error:', error);
+    throw new Error(error.message || 'Failed to delete service from Supabase.');
   }
 
-  // Proactively update cached services immediately
   const current = getInitialServices();
   const filtered = current.filter(s => s.id !== id);
   setCachedData(CACHE_KEYS.SERVICES, filtered);
@@ -429,7 +308,6 @@ export async function duplicateService(service: Service): Promise<string> {
   const newName = `${service.name} (Copy)`;
   let newSlug = `${service.slug || generateServiceSlug(service.name)}-copy`;
 
-  // Verify slug uniqueness
   let isUnique = await checkServiceSlugAvailability(newSlug);
   let counter = 1;
   while (!isUnique) {
@@ -442,7 +320,7 @@ export async function duplicateService(service: Service): Promise<string> {
     ...service,
     name: newName,
     slug: newSlug,
-    status: 'inactive', // Default duplicate to inactive so admin can review
+    status: 'inactive',
     displayOrder: (service.displayOrder ?? 0) + 1,
     seoTitle: `${newName} in Banani, Dhaka | ${SPA_INFO.name}`,
     canonicalUrl: buildCanonicalUrl(`/services/${newSlug}`)
@@ -464,12 +342,13 @@ export async function toggleServiceStatus(service: Service): Promise<'active' | 
  * Reorder services display order
  */
 export async function reorderServices(orderedServiceIds: string[]): Promise<void> {
-  for (let index = 0; index < orderedServiceIds.length; index++) {
-    const id = orderedServiceIds[index];
-    const serviceRef = doc(db, 'services', id);
-    await updateDoc(serviceRef, {
-      displayOrder: index,
-      updatedAt: new Date().toISOString()
-    });
-  }
+  const client = getSupabase();
+  const now = new Date().toISOString();
+  await Promise.all(
+    orderedServiceIds.map((id, index) =>
+      (client.from('services') as any)
+        .update({ display_order: index, updated_at: now })
+        .eq('id', id)
+    )
+  );
 }

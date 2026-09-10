@@ -2,8 +2,7 @@ import { useState, FormEvent } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Star, CheckCircle, PenLine, Loader2, Sparkles, RefreshCw } from 'lucide-react';
 import { INITIAL_REVIEWS, SPA_INFO } from '../../data/spaData';
-import { StoredReview, submitReview, loginWithGoogle } from '../../firebase';
-import { User } from 'firebase/auth';
+import { StoredReview, submitReview, loginWithGoogle, User } from '../../supabase';
 import { ReviewItem } from '../../types';
 import { connectGoogleBusinessAccount } from '../../services/googleBusinessProfile';
 
@@ -11,7 +10,8 @@ interface ReviewsModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentUser: User | null;
-  firebaseReviews: StoredReview[];
+  communityReviews?: StoredReview[];
+  firebaseReviews?: StoredReview[];
   syncedReviews?: ReviewItem[];
   syncedRating?: number;
   syncedCount?: number;
@@ -22,12 +22,14 @@ export function ReviewsModal({
   isOpen,
   onClose,
   currentUser,
-  firebaseReviews,
+  communityReviews,
+  firebaseReviews = [],
   syncedReviews,
   syncedRating,
   syncedCount,
   initialWriteMode = false
 }: ReviewsModalProps) {
+  const activeReviews = communityReviews || firebaseReviews;
   const [visibleCount, setVisibleCount] = useState(12);
   const [showWriteForm, setShowWriteForm] = useState(initialWriteMode);
   const [rating, setRating] = useState(5);
@@ -45,11 +47,11 @@ export function ReviewsModal({
 
   const baseReviews = (syncedReviews && syncedReviews.length > 0) ? syncedReviews : INITIAL_REVIEWS;
 
-  // Filter approved Firestore reviews
-  const approvedFirebase = firebaseReviews
+  // Filter approved Supabase reviews
+  const approvedLive = activeReviews
     .filter(r => (r as any).status !== 'hidden')
     .map(r => ({
-      id: r.id || `fb-${Math.random()}`,
+      id: r.id || `rev-${Math.random()}`,
       name: r.userName,
       avatar: r.userPhoto || 'https://lh3.googleusercontent.com/a/default-user',
       rating: r.rating,
@@ -60,9 +62,12 @@ export function ReviewsModal({
       adminResponse: (r as any).adminResponse
     }));
 
-  // If Firebase reviews are loaded/cached, use them as the primary source of truth
-  const combinedReviews = firebaseReviews.length > 0
-    ? approvedFirebase
+  const allLiveIds = new Set(activeReviews.map(r => r.id));
+  const remainingBase = baseReviews.filter(b => !allLiveIds.has(b.id));
+
+  // If live reviews are loaded/cached, prioritize approved live reviews followed by base reviews
+  const combinedReviews = approvedLive.length > 0
+    ? [...approvedLive, ...remainingBase]
     : baseReviews;
 
   const displayRating = syncedRating ?? SPA_INFO.rating;

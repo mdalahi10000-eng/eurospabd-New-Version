@@ -24,7 +24,7 @@ import {
   X,
   Plus
 } from 'lucide-react';
-import { User } from 'firebase/auth';
+import { User } from '../../../supabase';
 import { Article } from '../../../types';
 import { 
   createArticle, 

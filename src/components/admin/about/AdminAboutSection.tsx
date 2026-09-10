@@ -1,5 +1,5 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { User } from 'firebase/auth';
+import { User } from '../../../supabase';
 import { 
   Info, 
   Save, 

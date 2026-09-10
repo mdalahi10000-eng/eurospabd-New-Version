@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, Calendar, Clock, Phone, CheckCircle, Loader2, User as UserIcon } from 'lucide-react';
 import { SERVICES_DATA, SPA_INFO } from '../../data/spaData';
 import { Service, PriceOption } from '../../types';
-import { saveAppointment, loginWithGoogle } from '../../firebase';
-import { User } from 'firebase/auth';
+import { saveAppointment, loginWithGoogle, User } from '../../supabase';
 
 interface BookNowModalProps {
   isOpen: boolean;

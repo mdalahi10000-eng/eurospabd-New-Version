@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { User } from 'firebase/auth';
+import { User } from '../../../supabase';
 import { 
   Image as ImageIcon, 
   Plus, 

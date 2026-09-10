@@ -1,27 +1,8 @@
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  where, 
-  orderBy, 
-  serverTimestamp,
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../firebase';
 import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from '../supabase';
 import { mapSupabaseServiceAreaToServiceArea, mapServiceAreaToSupabaseRow } from './unifiedBackend';
 import { BusinessInfo, ServiceArea, RegularHours, DayOfWeek } from '../types';
 import { SPA_INFO } from '../data/spaData';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
-
-const SETTINGS_DOC_REF = doc(db, 'siteSettings', 'business');
-const SERVICE_AREAS_COLLECTION = collection(db, 'serviceAreas');
 
 export const DEFAULT_REGULAR_HOURS: RegularHours = {
   monday: { open: true, opens: '10:00', closes: '22:00' },
@@ -176,62 +157,40 @@ export const DEFAULT_SERVICE_AREAS: Omit<ServiceArea, 'id'>[] = [
 ];
 
 /**
- * Fetches the canonical business information from Firestore siteSettings/business,
- * merging with fallback DEFAULT_BUSINESS_INFO.
+ * Fetches the canonical business information from Supabase site_settings/business
  */
 export async function fetchBusinessInfo(): Promise<BusinessInfo> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('site_settings') as any)
-        .select('data')
-        .eq('id', 'business')
-        .maybeSingle();
-
-      if (!error && data?.data) {
-        const merged: BusinessInfo = {
-          ...DEFAULT_BUSINESS_INFO,
-          ...data.data,
-          regularHours: {
-            ...DEFAULT_REGULAR_HOURS,
-            ...(data.data.regularHours || {})
-          },
-          socialProfiles: {
-            ...DEFAULT_BUSINESS_INFO.socialProfiles,
-            ...(data.data.socialProfiles || {})
-          },
-          specialHours: Array.isArray(data.data.specialHours) ? data.data.specialHours : []
-        };
-        setCachedData(CACHE_KEYS.BUSINESS, merged);
-        return merged;
-      }
-    } catch (supaErr) {
-      console.warn('[Supabase] fetchBusinessInfo fallback to Firestore:', supaErr);
-    }
+  if (!isSupabaseConfigured()) {
+    return getInitialBusinessInfo();
   }
 
   try {
-    const snap = await getDoc(SETTINGS_DOC_REF);
-    if (snap.exists()) {
-      const data = snap.data();
+    const { data, error } = await (getSupabase().from('site_settings') as any)
+      .select('data')
+      .eq('id', 'business')
+      .maybeSingle();
+
+    if (!error && data?.data) {
       const merged: BusinessInfo = {
         ...DEFAULT_BUSINESS_INFO,
-        ...data,
+        ...data.data,
         regularHours: {
           ...DEFAULT_REGULAR_HOURS,
-          ...(data.regularHours || {})
+          ...(data.data.regularHours || {})
         },
         socialProfiles: {
           ...DEFAULT_BUSINESS_INFO.socialProfiles,
-          ...(data.socialProfiles || {})
+          ...(data.data.socialProfiles || {})
         },
-        specialHours: Array.isArray(data.specialHours) ? data.specialHours : []
+        specialHours: Array.isArray(data.data.specialHours) ? data.data.specialHours : []
       };
       setCachedData(CACHE_KEYS.BUSINESS, merged);
       return merged;
     }
-  } catch (error) {
-    console.warn('Could not fetch business info from Firestore, using default:', error);
+  } catch (supaErr) {
+    console.warn('[Supabase] fetchBusinessInfo error:', supaErr);
   }
+
   return getInitialBusinessInfo();
 }
 
@@ -273,52 +232,18 @@ export function getInitialServiceAreas(): ServiceArea[] {
 }
 
 /**
- * Real-time listener for canonical business information from Firestore
+ * Real-time listener for canonical business information
  */
 export function subscribeToBusinessInfo(callback: (info: BusinessInfo) => void): () => void {
-  if (isSupabaseConfigured()) {
-    fetchBusinessInfo().then(callback);
-    return subscribeToSupabaseTable('site_settings', async () => {
-      const updated = await fetchBusinessInfo();
-      callback(updated);
-    });
-  }
-
-  return onSnapshot(
-    SETTINGS_DOC_REF,
-    (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        const merged: BusinessInfo = {
-          ...DEFAULT_BUSINESS_INFO,
-          ...data,
-          regularHours: {
-            ...DEFAULT_REGULAR_HOURS,
-            ...(data.regularHours || {})
-          },
-          socialProfiles: {
-            ...DEFAULT_BUSINESS_INFO.socialProfiles,
-            ...(data.socialProfiles || {})
-          },
-          specialHours: Array.isArray(data.specialHours) ? data.specialHours : []
-        };
-        setCachedData(CACHE_KEYS.BUSINESS, merged);
-        callback(merged);
-      } else {
-        const initial = getInitialBusinessInfo();
-        callback(initial);
-      }
-    },
-    (error) => {
-      console.warn('Firestore subscribeToBusinessInfo onSnapshot error:', error);
-      const fallback = getInitialBusinessInfo();
-      callback(fallback);
-    }
-  );
+  fetchBusinessInfo().then(callback);
+  return subscribeToSupabaseTable('site_settings', async () => {
+    const updated = await fetchBusinessInfo();
+    callback(updated);
+  });
 }
 
 /**
- * Updates business information in Firestore siteSettings/business (Admin only)
+ * Updates business information in Supabase site_settings/business
  */
 export async function updateBusinessInfo(
   updates: Partial<BusinessInfo>, 
@@ -332,69 +257,49 @@ export async function updateBusinessInfo(
     updatedBy: adminEmail || 'admin'
   };
 
-  // Update local cache immediately
   setCachedData(CACHE_KEYS.BUSINESS, merged);
 
   if (isSupabaseConfigured()) {
-    try {
-      await (getSupabase().from('site_settings') as any).upsert({
-        id: 'business',
-        data: merged,
-        updated_at: new Date().toISOString(),
-        updated_by: adminEmail || 'admin'
-      });
-    } catch (supaErr) {
-      console.warn('[Supabase] updateBusinessInfo sync error:', supaErr);
+    const { error } = await (getSupabase().from('site_settings') as any).upsert({
+      id: 'business',
+      data: merged,
+      updated_at: new Date().toISOString(),
+      updated_by: adminEmail || 'admin'
+    });
+    if (error) {
+      console.error('[Supabase] updateBusinessInfo error:', error);
+      throw new Error(error.message || 'Failed to update business settings.');
     }
   }
-
-  await setDoc(SETTINGS_DOC_REF, {
-    ...merged,
-    serverTimestamp: serverTimestamp()
-  }, { merge: true });
 
   return merged;
 }
 
 /**
- * Fetches all service areas (for admin)
+ * Fetches all service areas (for admin) from Supabase
  */
 export async function fetchAllServiceAreas(): Promise<ServiceArea[]> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('service_areas') as any)
-        .select('*')
-        .order('display_order', { ascending: true });
-
-      if (!error && data && data.length > 0) {
-        const mapped = data.map(mapSupabaseServiceAreaToServiceArea);
-        setCachedData(CACHE_KEYS.SERVICE_AREAS, mapped);
-        return mapped;
-      }
-    } catch (supaErr) {
-      console.warn('[Supabase] fetchAllServiceAreas fallback to Firestore:', supaErr);
-    }
+  if (!isSupabaseConfigured()) {
+    return getInitialServiceAreas();
   }
 
   try {
-    const snap = await getDocs(query(SERVICE_AREAS_COLLECTION, orderBy('displayOrder', 'asc')));
-    if (!snap.empty) {
-      const items = snap.docs.map(doc => ({
-        id: doc.id,
-        ...(doc.data() as Omit<ServiceArea, 'id'>)
-      }));
-      setCachedData(CACHE_KEYS.SERVICE_AREAS, items);
-      return items;
-    }
-  } catch (error) {
-    console.warn('Could not fetch service areas from Firestore:', error);
-  }
+    const { data, error } = await (getSupabase().from('service_areas') as any)
+      .select('*')
+      .order('display_order', { ascending: true });
 
-  // If empty, seed from DEFAULT_SERVICE_AREAS in memory
-  return DEFAULT_SERVICE_AREAS.map((a, idx) => ({
-    ...a,
-    id: `default-${idx + 1}`
-  }));
+    if (!error && data && data.length > 0) {
+      const mapped = data.map(mapSupabaseServiceAreaToServiceArea);
+      setCachedData(CACHE_KEYS.SERVICE_AREAS, mapped);
+      return mapped;
+    }
+
+    // Seed defaults if empty
+    return await seedServiceAreasIfEmpty();
+  } catch (supaErr) {
+    console.warn('[Supabase] fetchAllServiceAreas error:', supaErr);
+    return getInitialServiceAreas();
+  }
 }
 
 /**
@@ -413,33 +318,24 @@ export async function fetchPublicServiceAreas(): Promise<ServiceArea[]> {
  * Fetches a single service area by slug
  */
 export async function fetchServiceAreaBySlug(slug: string): Promise<ServiceArea | null> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('service_areas') as any)
-        .select('*')
-        .eq('slug', slug)
-        .maybeSingle();
-
-      if (!error && data) {
-        return mapSupabaseServiceAreaToServiceArea(data);
-      }
-    } catch (supaErr) {
-      console.warn('[Supabase] fetchServiceAreaBySlug fallback to Firestore:', supaErr);
-    }
+  if (!isSupabaseConfigured()) {
+    const found = DEFAULT_SERVICE_AREAS.find(a => a.slug === slug);
+    return found ? { ...found, id: `default-${found.slug}` } : null;
   }
 
   try {
-    const q = query(SERVICE_AREAS_COLLECTION, where('slug', '==', slug));
-    const snap = await getDocs(q);
-    if (!snap.empty) {
-      const doc = snap.docs[0];
-      return { id: doc.id, ...(doc.data() as Omit<ServiceArea, 'id'>) };
+    const { data, error } = await (getSupabase().from('service_areas') as any)
+      .select('*')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (!error && data) {
+      return mapSupabaseServiceAreaToServiceArea(data);
     }
-  } catch (e) {
-    console.warn('Error querying service area by slug:', e);
+  } catch (supaErr) {
+    console.warn('[Supabase] fetchServiceAreaBySlug error:', supaErr);
   }
 
-  // Fallback to local default array
   const found = DEFAULT_SERVICE_AREAS.find(a => a.slug === slug);
   if (found) {
     return { ...found, id: `default-${found.slug}` };
@@ -448,77 +344,65 @@ export async function fetchServiceAreaBySlug(slug: string): Promise<ServiceArea 
 }
 
 /**
- * Saves or updates a service area document
+ * Saves or updates a service area document in Supabase
  */
 export async function saveServiceArea(area: Partial<ServiceArea> & { name: string; slug: string }): Promise<string> {
   const cleanSlug = area.slug.toLowerCase().trim().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-');
   const now = new Date().toISOString();
+  const client = getSupabase();
 
   if (area.id && !area.id.startsWith('default-')) {
-    const docRef = doc(SERVICE_AREAS_COLLECTION, area.id);
     const { id, ...data } = area;
-    await updateDoc(docRef, {
-      ...data,
-      slug: cleanSlug,
-      updatedAt: now
-    });
-
-    if (isSupabaseConfigured()) {
-      try {
-        const supaRow = mapServiceAreaToSupabaseRow({ ...data, slug: cleanSlug, id: area.id });
-        await (getSupabase().from('service_areas') as any).update(supaRow).eq('id', area.id);
-      } catch (supaErr) {
-        console.warn('[Supabase] saveServiceArea update sync error:', supaErr);
-      }
+    const supaRow = mapServiceAreaToSupabaseRow({ ...data, slug: cleanSlug, id: area.id });
+    const { error } = await (client.from('service_areas') as any).update(supaRow).eq('id', area.id);
+    if (error) {
+      console.error('[Supabase] saveServiceArea update error:', error);
+      throw new Error(error.message || 'Failed to update service area.');
     }
 
     const current = getInitialServiceAreas();
     setCachedData(CACHE_KEYS.SERVICE_AREAS, current.map(a => a.id === area.id ? { ...a, ...data, slug: cleanSlug, updatedAt: now } : a));
     return area.id;
   } else {
-    // New document
+    const newId = `area_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const { id, ...data } = area;
-    const newAreaPayload: any = {
+    const fullArea: ServiceArea = {
       ...data,
+      id: newId,
+      name: area.name,
       slug: cleanSlug,
-      status: data.status || 'active',
-      displayOrder: typeof data.displayOrder === 'number' ? data.displayOrder : 99,
-      createdAt: serverTimestamp(),
+      shortDescription: area.shortDescription || '',
+      content: area.content || '',
+      status: area.status || 'active',
+      displayOrder: typeof area.displayOrder === 'number' ? area.displayOrder : 99,
       updatedAt: now
     };
-    const docRef = await addDoc(SERVICE_AREAS_COLLECTION, newAreaPayload);
 
-    if (isSupabaseConfigured()) {
-      try {
-        const supaRow = mapServiceAreaToSupabaseRow({ ...newAreaPayload, id: docRef.id });
-        await (getSupabase().from('service_areas') as any).upsert(supaRow);
-      } catch (supaErr) {
-        console.warn('[Supabase] saveServiceArea insert sync error:', supaErr);
-      }
+    const supaRow = mapServiceAreaToSupabaseRow(fullArea);
+    const { error } = await (client.from('service_areas') as any).upsert(supaRow);
+    if (error) {
+      console.error('[Supabase] saveServiceArea insert error:', error);
+      throw new Error(error.message || 'Failed to insert service area.');
     }
 
     const current = getInitialServiceAreas();
-    setCachedData(CACHE_KEYS.SERVICE_AREAS, [...current, { ...newAreaPayload, id: docRef.id }]);
-    return docRef.id;
+    setCachedData(CACHE_KEYS.SERVICE_AREAS, [...current, fullArea]);
+    return newId;
   }
 }
 
 /**
- * Deletes a service area
+ * Deletes a service area from Supabase
  */
 export async function deleteServiceArea(areaId: string): Promise<void> {
   if (areaId.startsWith('default-')) {
-    return; // Cannot delete in-memory template
+    return;
   }
-  const docRef = doc(SERVICE_AREAS_COLLECTION, areaId);
-  await deleteDoc(docRef);
 
-  if (isSupabaseConfigured()) {
-    try {
-      await (getSupabase().from('service_areas') as any).delete().eq('id', areaId);
-    } catch (supaErr) {
-      console.warn('[Supabase] deleteServiceArea sync error:', supaErr);
-    }
+  const { error } = await (getSupabase().from('service_areas') as any).delete().eq('id', areaId);
+  if (error) {
+    console.error('[Supabase] deleteServiceArea error:', error);
+    throw new Error(error.message || 'Failed to delete service area.');
   }
 
   const current = getInitialServiceAreas();
@@ -526,28 +410,42 @@ export async function deleteServiceArea(areaId: string): Promise<void> {
 }
 
 /**
- * Seeds default service areas if collection is currently empty
+ * Seeds default service areas if table is currently empty
  */
-export async function seedServiceAreasIfEmpty(): Promise<number> {
+export async function seedServiceAreasIfEmpty(): Promise<ServiceArea[]> {
+  if (!isSupabaseConfigured()) {
+    return DEFAULT_SERVICE_AREAS.map((a, idx) => ({ ...a, id: `default-${idx + 1}` }));
+  }
+
   try {
-    const snap = await getDocs(SERVICE_AREAS_COLLECTION);
-    if (snap.size === 0) {
-      let count = 0;
-      for (const area of DEFAULT_SERVICE_AREAS) {
-        await addDoc(SERVICE_AREAS_COLLECTION, {
-          ...area,
-          createdAt: serverTimestamp(),
-          updatedAt: new Date().toISOString()
-        });
-        count++;
-      }
-      return count;
+    const client = getSupabase();
+    const rows = DEFAULT_SERVICE_AREAS.map((a, idx) => ({
+      id: `sa_${idx + 1}`,
+      name: a.name,
+      slug: a.slug,
+      short_description: a.shortDescription,
+      content: a.content,
+      status: a.status || 'active',
+      seo_title: a.seoTitle,
+      meta_description: a.metaDescription,
+      focus_keyword: a.focusKeyword,
+      display_order: a.displayOrder ?? (idx + 1),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }));
+
+    await (client.from('service_areas') as any).upsert(rows);
+    const { data } = await (client.from('service_areas') as any).select('*').order('display_order', { ascending: true });
+    if (data && data.length > 0) {
+      const mapped = data.map(mapSupabaseServiceAreaToServiceArea);
+      setCachedData(CACHE_KEYS.SERVICE_AREAS, mapped);
+      return mapped;
     }
-    return snap.size;
   } catch (error) {
     console.warn('Could not seed service areas:', error);
-    return 0;
   }
+
+  return DEFAULT_SERVICE_AREAS.map((a, idx) => ({ ...a, id: `default-${idx + 1}` }));
 }
 
 /**
@@ -582,12 +480,10 @@ export function generateLocalBusinessSchema(
     sunday: 'Sunday'
   };
 
-  // Group opening hours specification
   const openingHoursSpec: any[] = [];
   const openDays = (Object.keys(info.regularHours) as DayOfWeek[]).filter(d => info.regularHours[d]?.open);
 
   if (openDays.length > 0) {
-    // Check if all open days share the same opening and closing times
     const sample = info.regularHours[openDays[0]];
     const allSame = openDays.every(d => 
       info.regularHours[d].opens === sample.opens && 
@@ -614,11 +510,9 @@ export function generateLocalBusinessSchema(
     }
   }
 
-  // Social sameAs array
   const sameAs = Object.values(info.socialProfiles || {})
     .filter((url): url is string => typeof url === 'string' && url.trim().length > 0 && url.startsWith('http'));
 
-  // Area served
   const areaServed = (activeAreas && activeAreas.length > 0)
     ? activeAreas.map(a => ({
         '@type': 'AdministrativeArea',
@@ -681,14 +575,14 @@ export function injectLocalBusinessSchema(
 
   let scriptEl = document.getElementById('euro-spa-local-business-schema') as HTMLScriptElement | null;
 
-if (!scriptEl) {
-  scriptEl = document.createElement('script');
-  scriptEl.id = 'euro-spa-local-business-schema';
-  scriptEl.type = 'application/ld+json';
-  document.head.appendChild(scriptEl);
-}
+  if (!scriptEl) {
+    scriptEl = document.createElement('script');
+    scriptEl.id = 'euro-spa-local-business-schema';
+    scriptEl.type = 'application/ld+json';
+    document.head.appendChild(scriptEl);
+  }
 
-scriptEl.textContent = jsonStr;
+  scriptEl.textContent = jsonStr;
 }
 
 export interface LocalSeoAuditItem {
@@ -701,16 +595,12 @@ export interface LocalSeoAuditItem {
 }
 
 export interface LocalSeoAuditResult {
-  score: number; // 0 to 100
+  score: number;
   passedCount: number;
   totalCount: number;
   items: LocalSeoAuditItem[];
 }
 
-/**
- * Calculates a 12-point advisory checklist for the Local SEO audit.
- * Note: Clearly framed as an advisory completeness tool, NOT Google's ranking algorithm.
- */
 export function calculateLocalSeoAudit(
   info: BusinessInfo, 
   areas: ServiceArea[]

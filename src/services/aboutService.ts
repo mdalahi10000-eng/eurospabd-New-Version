@@ -1,11 +1,3 @@
-import { 
-  doc, 
-  getDoc, 
-  setDoc, 
-  onSnapshot, 
-  serverTimestamp 
-} from 'firebase/firestore';
-import { db } from '../firebase';
 import { isSupabaseConfigured, getSupabase, subscribeToSupabaseTable } from '../supabase';
 import { SPA_INFO } from '../data/spaData';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
@@ -64,49 +56,32 @@ export const DEFAULT_ABOUT_CONTENT: AboutContent = {
   ]
 };
 
-const ABOUT_DOC_REF = doc(db, 'siteSettings', 'about');
-
 export async function fetchAboutContent(): Promise<AboutContent> {
-  if (isSupabaseConfigured()) {
-    try {
-      const { data, error } = await (getSupabase().from('site_settings') as any)
-        .select('data')
-        .eq('id', 'about')
-        .maybeSingle();
-
-      if (!error && data?.data) {
-        const merged: AboutContent = {
-          ...DEFAULT_ABOUT_CONTENT,
-          ...data.data,
-          highlights: Array.isArray(data.data.highlights) && data.data.highlights.length > 0
-            ? data.data.highlights
-            : DEFAULT_ABOUT_CONTENT.highlights
-        };
-        setCachedData(CACHE_KEYS.ABOUT, merged);
-        return merged;
-      }
-    } catch (supaErr) {
-      console.warn('[Supabase] fetchAboutContent fallback to Firestore:', supaErr);
-    }
+  if (!isSupabaseConfigured()) {
+    return getInitialAboutContent();
   }
 
   try {
-    const snap = await getDoc(ABOUT_DOC_REF);
-    if (snap.exists()) {
-      const data = snap.data();
+    const { data, error } = await (getSupabase().from('site_settings') as any)
+      .select('data')
+      .eq('id', 'about')
+      .maybeSingle();
+
+    if (!error && data?.data) {
       const merged: AboutContent = {
         ...DEFAULT_ABOUT_CONTENT,
-        ...data,
-        highlights: Array.isArray(data.highlights) && data.highlights.length > 0 
-          ? data.highlights 
+        ...data.data,
+        highlights: Array.isArray(data.data.highlights) && data.data.highlights.length > 0
+          ? data.data.highlights
           : DEFAULT_ABOUT_CONTENT.highlights
       };
       setCachedData(CACHE_KEYS.ABOUT, merged);
       return merged;
     }
-  } catch (err) {
-    console.warn('Error fetching about content:', err);
+  } catch (supaErr) {
+    console.warn('[Supabase] fetchAboutContent error:', supaErr);
   }
+
   return getInitialAboutContent();
 }
 
@@ -128,40 +103,11 @@ export function getInitialAboutContent(): AboutContent {
 }
 
 export function subscribeToAboutContent(callback: (content: AboutContent) => void): () => void {
-  if (isSupabaseConfigured()) {
-    fetchAboutContent().then(callback);
-    return subscribeToSupabaseTable('site_settings', async () => {
-      const updated = await fetchAboutContent();
-      callback(updated);
-    });
-  }
-
-  try {
-    return onSnapshot(ABOUT_DOC_REF, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        const merged: AboutContent = {
-          ...DEFAULT_ABOUT_CONTENT,
-          ...data,
-          highlights: Array.isArray(data.highlights) && data.highlights.length > 0 
-            ? data.highlights 
-            : DEFAULT_ABOUT_CONTENT.highlights
-        };
-        setCachedData(CACHE_KEYS.ABOUT, merged);
-        callback(merged);
-      } else {
-        const initial = getInitialAboutContent();
-        callback(initial);
-      }
-    }, (err) => {
-      console.warn('About content snapshot error:', err);
-      const fallback = getInitialAboutContent();
-      callback(fallback);
-    });
-  } catch (err) {
-    console.warn('Error subscribing to about content:', err);
-    return () => {};
-  }
+  fetchAboutContent().then(callback);
+  return subscribeToSupabaseTable('site_settings', async () => {
+    const updated = await fetchAboutContent();
+    callback(updated);
+  });
 }
 
 export async function updateAboutContent(content: AboutContent, updatedBy?: string): Promise<void> {
@@ -170,25 +116,18 @@ export async function updateAboutContent(content: AboutContent, updatedBy?: stri
     ...content
   };
 
-  // Update local cache immediately
   setCachedData(CACHE_KEYS.ABOUT, merged);
 
   if (isSupabaseConfigured()) {
-    try {
-      await (getSupabase().from('site_settings') as any).upsert({
-        id: 'about',
-        data: merged,
-        updated_at: new Date().toISOString(),
-        updated_by: updatedBy || 'admin'
-      });
-    } catch (supaErr) {
-      console.warn('[Supabase] updateAboutContent sync error:', supaErr);
+    const { error } = await (getSupabase().from('site_settings') as any).upsert({
+      id: 'about',
+      data: merged,
+      updated_at: new Date().toISOString(),
+      updated_by: updatedBy || 'admin'
+    });
+    if (error) {
+      console.error('[Supabase] updateAboutContent error:', error);
+      throw new Error(error.message || 'Failed to update about content.');
     }
   }
-
-  await setDoc(ABOUT_DOC_REF, {
-    ...merged,
-    updatedAt: serverTimestamp(),
-    updatedBy: updatedBy || 'admin'
-  }, { merge: true });
 }

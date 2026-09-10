@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, LogIn, LogOut, Calendar, Star, MapPin, Image, Sparkles, Phone, Clock, User as UserIcon, BookOpen, Info } from 'lucide-react';
-import { User } from 'firebase/auth';
-import { loginWithGoogle, logoutUser, fetchUserAppointments, StoredAppointment } from '../../firebase';
+import { loginWithGoogle, logoutUser, fetchUserAppointments, StoredAppointment, User } from '../../supabase';
 import { SPA_INFO } from '../../data/spaData';
 import { LotusIcon } from '../LotusIcon';
 import { navigate } from '../../router';

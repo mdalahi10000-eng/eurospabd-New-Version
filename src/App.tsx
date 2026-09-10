@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth, subscribeToReviews, StoredReview } from './firebase';
+import { subscribeToReviews, StoredReview, User, getSupabase, formatSupabaseUser } from './supabase';
 import { SPA_INFO, SERVICES_DATA, PHOTOS_DATA } from './data/spaData';
 import { Service, PriceOption, PhotoItem, BusinessInfo, ServiceArea } from './types';
 import { subscribeToGoogleBusinessSync, SyncedGoogleData, getInitialGoogleBusinessSync } from './services/googleBusinessProfile';
@@ -49,7 +48,7 @@ export default function App() {
   const { match } = useLocationPath();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [firebaseReviews, setFirebaseReviews] = useState<StoredReview[]>(() => getCachedData<StoredReview[]>(CACHE_KEYS.REVIEWS) || []);
+  const [communityReviews, setCommunityReviews] = useState<StoredReview[]>(() => getCachedData<StoredReview[]>(CACHE_KEYS.REVIEWS) || []);
   const [syncedGoogleData, setSyncedGoogleData] = useState<SyncedGoogleData | null>(() => getInitialGoogleBusinessSync());
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [services, setServices] = useState<Service[]>(() => getInitialServices());
@@ -231,18 +230,22 @@ useEffect(() => {
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
   const [isMenuDrawerOpen, setIsMenuDrawerOpen] = useState(false);
 
-  // Listen to Firebase Auth state
+  // Listen to Supabase Auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setCurrentUser(user);
+    const { data: { subscription } } = getSupabase().auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setCurrentUser(formatSupabaseUser(session.user));
+      } else {
+        setCurrentUser(null);
+      }
     });
-    return () => unsubscribe();
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Listen to live community reviews in Firestore
+  // Listen to live community reviews in Supabase
   useEffect(() => {
     const unsubReviews = subscribeToReviews((revs) => {
-      setFirebaseReviews(revs);
+      setCommunityReviews(revs);
       setReviewsLoading(false);
     });
     return () => unsubReviews();
@@ -546,7 +549,7 @@ useEffect(() => {
 
         {/* What Our Clients Say (Reviews) */}
         <ReviewsSection
-          firebaseReviews={firebaseReviews}
+          communityReviews={communityReviews}
           syncedReviews={syncedGoogleData?.reviews}
           loading={reviewsLoading}
           onOpenReviewsModal={() => {
@@ -626,7 +629,7 @@ useEffect(() => {
         isOpen={isReviewsModalOpen}
         onClose={() => setIsReviewsModalOpen(false)}
         currentUser={currentUser}
-        firebaseReviews={firebaseReviews}
+        communityReviews={communityReviews}
         syncedReviews={syncedGoogleData?.reviews}
         syncedRating={syncedGoogleData?.rating}
         syncedCount={syncedGoogleData?.reviewsCount}
