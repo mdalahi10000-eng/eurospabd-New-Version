@@ -9,16 +9,13 @@ import {
   Mail,
   Eye,
   EyeOff,
-  User,
   CheckCircle2,
   Users,
   Info,
-  RotateCw,
-  KeyRound
+  RotateCw
 } from 'lucide-react';
 import { 
   loginWithPassword, 
-  signUpWithPassword, 
   resetPasswordForEmail, 
   checkIsAdmin, 
   logoutUser 
@@ -33,14 +30,12 @@ interface AdminLoginPageProps {
   onRetryConnection?: () => void;
 }
 
-type AuthMode = 'signin' | 'signup' | 'forgot';
+type AuthMode = 'signin' | 'forgot';
 
 export function AdminLoginPage({ onSuccess, startupNotice, onRetryConnection }: AdminLoginPageProps) {
   const [authMode, setAuthMode] = useState<AuthMode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -51,7 +46,6 @@ export function AdminLoginPage({ onSuccess, startupNotice, onRetryConnection }: 
     setErrorMessage(null);
     setSuccessMessage(null);
     setPassword('');
-    setConfirmPassword('');
   };
 
   const handleSignIn = async (e: FormEvent) => {
@@ -85,57 +79,6 @@ export function AdminLoginPage({ onSuccess, startupNotice, onRetryConnection }: 
     } catch (err: any) {
       console.error('Admin Sign-in error:', err);
       const msg = err?.message || 'Authentication failed. Please verify your credentials and try again.';
-      setErrorMessage(msg);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSignUp = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !password) {
-      setErrorMessage('Please enter an email and password for your new account.');
-      return;
-    }
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters in length.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match. Please re-enter your password.');
-      return;
-    }
-
-    setLoading(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-
-    try {
-      const { data, error } = await signUpWithPassword(email, password, fullName);
-      if (error) {
-        throw error;
-      }
-
-      if (data?.session && data?.user) {
-        const isAdmin = await checkIsAdmin(data.user);
-        if (!isAdmin) {
-          await logoutUser();
-          setSuccessMessage(
-            `Account successfully registered for ${email.trim()}! Please note: Your account is pending administrative authorization. An existing administrator must add ${email.trim()} to the /admins directory.`
-          );
-          setAuthMode('signin');
-        } else if (onSuccess) {
-          onSuccess();
-        }
-      } else {
-        setSuccessMessage(
-          `Account registration dispatched for ${email.trim()}! If email confirmation is enabled on your Supabase instance, please check your inbox to confirm your address before signing in.`
-        );
-        setAuthMode('signin');
-      }
-    } catch (err: any) {
-      console.error('Admin Sign-up error:', err);
-      const msg = err?.message || 'Registration failed. Please check your credentials and try again.';
       setErrorMessage(msg);
     } finally {
       setLoading(false);
@@ -186,7 +129,7 @@ export function AdminLoginPage({ onSuccess, startupNotice, onRetryConnection }: 
 
         <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
           <Lock className="w-3.5 h-3.5 text-blue-400" />
-          <span>Restricted Area</span>
+          <span>Restricted Portal</span>
         </div>
       </header>
 
@@ -221,39 +164,10 @@ export function AdminLoginPage({ onSuccess, startupNotice, onRetryConnection }: 
                   {SPA_INFO.name}
                 </h1>
                 <p className="text-xs text-slate-400 mt-1">
-                  {authMode === 'signin' && 'Sign in with your authorized email and password to access CMS & booking controls.'}
-                  {authMode === 'signup' && 'Register a new administrator account with your email and password.'}
+                  {authMode === 'signin' && 'Sign in with your authorized credentials to access CMS & booking controls.'}
                   {authMode === 'forgot' && 'Enter your administrator email to receive a password reset link.'}
                 </p>
               </div>
-            </div>
-
-            {/* Mode Switcher Tabs */}
-            <div className="flex rounded-xl bg-slate-950 p-1 border border-slate-800 text-xs">
-              <button
-                id="tab-admin-signin"
-                type="button"
-                onClick={() => resetFormState('signin')}
-                className={`flex-1 py-1.5 font-semibold rounded-lg transition-all cursor-pointer ${
-                  authMode === 'signin'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Sign In
-              </button>
-              <button
-                id="tab-admin-signup"
-                type="button"
-                onClick={() => resetFormState('signup')}
-                className={`flex-1 py-1.5 font-semibold rounded-lg transition-all cursor-pointer ${
-                  authMode === 'signup'
-                    ? 'bg-blue-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                Create Account
-              </button>
             </div>
 
             {/* Error Notification */}
@@ -392,119 +306,12 @@ export function AdminLoginPage({ onSuccess, startupNotice, onRetryConnection }: 
               </form>
             )}
 
-            {/* 2. SIGN UP FORM */}
-            {authMode === 'signup' && (
-              <form onSubmit={handleSignUp} className="space-y-4">
-                <div className="space-y-1.5">
-                  <label htmlFor="input-admin-fullname" className="block text-xs font-semibold text-slate-300">
-                    Full Name (Optional)
-                  </label>
-                  <div className="relative">
-                    <User className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      id="input-admin-fullname"
-                      type="text"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="e.g. Alahi"
-                      autoComplete="name"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/90 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="input-admin-signup-email" className="block text-xs font-semibold text-slate-300">
-                    Email Address
-                  </label>
-                  <div className="relative">
-                    <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      id="input-admin-signup-email"
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@eurospadhaka.com"
-                      autoComplete="email"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/90 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="input-admin-signup-password" className="block text-xs font-semibold text-slate-300">
-                    Password (min 6 characters)
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      id="input-admin-signup-password"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      autoComplete="new-password"
-                      className="w-full pl-10 pr-10 py-2.5 bg-slate-950/90 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                    />
-                    <button
-                      id="btn-toggle-password-signup"
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 cursor-pointer"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label htmlFor="input-admin-signup-confirm" className="block text-xs font-semibold text-slate-300">
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    <input
-                      id="input-admin-signup-confirm"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="••••••••"
-                      autoComplete="new-password"
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-950/90 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  id="btn-admin-submit-signup"
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-900/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed mt-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Creating Account...</span>
-                    </>
-                  ) : (
-                    <>
-                      <KeyRound className="w-3.5 h-3.5" />
-                      <span>Create Administrator Account</span>
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
-
-            {/* 3. FORGOT PASSWORD FORM */}
+            {/* 2. FORGOT PASSWORD FORM */}
             {authMode === 'forgot' && (
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-1.5">
                   <label htmlFor="input-admin-forgot-email" className="block text-xs font-semibold text-slate-300">
-                    Registered Email Address
+                    Registered Administrator Email
                   </label>
                   <div className="relative">
                     <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -557,14 +364,14 @@ export function AdminLoginPage({ onSuccess, startupNotice, onRetryConnection }: 
             <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 space-y-2">
               <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
                 <Users className="w-3.5 h-3.5 text-blue-400" />
-                <span>Role-Based Access Control</span>
+                <span>Private Administrator Portal</span>
               </div>
               <p className="text-[11px] text-slate-400 leading-relaxed">
-                Administrative access is restricted to emails registered in the secure <code>/admins</code> directory. Unauthorized accounts cannot access CMS or booking features.
+                Self-registration is disabled. Access is strictly restricted to pre-authorized administrator accounts present in the <code>/admins</code> collection.
               </p>
               <div className="pt-1 flex items-center gap-1.5 text-[10px] text-emerald-400 font-medium">
                 <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                <span>Supabase encrypted credentials &bull; Authorized administrators only</span>
+                <span>Supabase encrypted authentication &bull; Authorized personnel only</span>
               </div>
             </div>
           </motion.div>
