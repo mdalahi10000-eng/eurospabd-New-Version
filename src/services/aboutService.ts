@@ -7,6 +7,7 @@ export interface AboutHighlight {
   title: string;
   description?: string;
   iconName?: string;
+  imageUrl?: string;
 }
 
 export interface AboutContent {
@@ -16,6 +17,9 @@ export interface AboutContent {
   secondaryText?: string;
   featuredImage?: string;
   featuredImageAlt?: string;
+  logoImage?: string;
+  facilityImage?: string;
+  facilityImageAlt?: string;
   highlights: AboutHighlight[];
   yearsOfExperience?: string;
   clientsServed?: string;
@@ -30,6 +34,9 @@ export const DEFAULT_ABOUT_CONTENT: AboutContent = {
   secondaryText: 'Step into a calm, clean, and private atmosphere crafted for complete physical renewal and mental peace. We adhere to the highest hygiene benchmarks with single-use sanitization, premium essential aromatherapy oils, and individual VIP suites.',
   featuredImage: 'https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w800-h450-k-no',
   featuredImageAlt: 'Euro Spa Center Interior & Ambience',
+  logoImage: '',
+  facilityImage: '',
+  facilityImageAlt: 'Euro Spa Center Banani Private VIP Sanctuary & Therapy Room',
   yearsOfExperience: '8+ Years',
   clientsServed: '15,000+',
   highlights: [

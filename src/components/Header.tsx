@@ -39,9 +39,15 @@ export function Header({
   const category = homepageContent?.categoryBadge || businessInfo?.primaryCategory || SPA_INFO.category;
   const locationShort = homepageContent?.locationBadge || (businessInfo ? `${businessInfo.area}, ${businessInfo.city}` : SPA_INFO.locationShort);
   const statusDisplay = homepageContent?.statusBadge || businessInfo?.displayStatus || `Open · ${SPA_INFO.openingHours} Daily`;
-  const heroImage = homepageContent?.heroBannerImage || "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w800-h450-k-no";
+  const heroImage = (homepageContent?.heroBannerImage && homepageContent.heroBannerImage.trim().length > 0)
+    ? homepageContent.heroBannerImage
+    : (homepageContent?.ambienceImage && homepageContent.ambienceImage.trim().length > 0)
+      ? homepageContent.ambienceImage
+      : "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w800-h450-k-no";
   const heroAlt = homepageContent?.heroBannerAlt || "Euro Spa Center Ambience";
-  const logo = homepageContent?.logoImage || euroSpaLogo;
+  const logo = (homepageContent?.logoImage && homepageContent.logoImage.trim().length > 0)
+    ? homepageContent.logoImage
+    : euroSpaLogo;
 
   // CTA button configs
   const cta = homepageContent?.ctaButtons;
@@ -90,7 +96,7 @@ export function Header({
       </div>
 
       {/* Hero Banner with Clean Minimalist Overlay */}
-      <div className="relative w-full h-52 sm:h-60 md:h-64 overflow-hidden bg-gray-200">
+      <div className="relative w-full h-52 sm:h-60 md:h-64 overflow-hidden bg-gray-900">
         <img
           src={heroImage}
           alt={heroAlt}
@@ -98,6 +104,9 @@ export function Header({
           loading="eager"
           fetchPriority="high"
           decoding="async"
+          onError={(e) => {
+            (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w800-h450-k-no";
+          }}
           className="w-full h-full object-cover object-center"
         />
         {/* Soft natural gradient */}
@@ -111,6 +120,9 @@ export function Header({
             src={logo}
             alt="Euro Spa Center Logo"
             referrerPolicy="no-referrer"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = euroSpaLogo;
+            }}
             className="w-full h-full object-contain rounded-full bg-white"
           />
         </div>

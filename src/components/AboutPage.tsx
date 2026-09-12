@@ -197,8 +197,13 @@ export function AboutPage({
     ? content.highlights
     : DEFAULT_ABOUT_CONTENT.highlights;
 
+  const pageLogo = content.logoImage || euroSpaLogo;
+  const hasFeaturedImg = content.featuredImage !== undefined && content.featuredImage !== null 
+    ? content.featuredImage.trim().length > 0 
+    : Boolean(DEFAULT_ABOUT_CONTENT.featuredImage);
   const featuredImgUrl = content.featuredImage || DEFAULT_ABOUT_CONTENT.featuredImage;
   const featuredImgAlt = content.featuredImageAlt || `${name} Interior, Ambience & VIP Suite`;
+  const hasFacilityImg = Boolean(content.facilityImage && content.facilityImage.trim().length > 0);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-gray-900 flex flex-col font-sans selection:bg-blue-100 selection:text-blue-900">
@@ -218,8 +223,10 @@ export function AboutPage({
             </button>
             <div className="flex items-center gap-2.5">
               <img 
-                src={euroSpaLogo} 
+                src={pageLogo} 
                 alt={name} 
+                referrerPolicy="no-referrer"
+                onError={(e) => { (e.target as HTMLImageElement).src = euroSpaLogo; }}
                 className="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-2xs" 
               />
               <div>
@@ -376,27 +383,49 @@ export function AboutPage({
 
             {/* Featured Image & Ambience Preview */}
             <div className="lg:col-span-5">
-              <div className="relative rounded-3xl overflow-hidden shadow-lg border border-gray-200 bg-gray-100 group">
-                <img
-                  src={featuredImgUrl}
-                  alt={featuredImgAlt}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-80 sm:h-96 lg:h-[420px] object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = DEFAULT_ABOUT_CONTENT.featuredImage!;
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-transparent to-transparent flex flex-col justify-end p-6 text-white">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-blue-300">
-                    Banani Luxury Spa Sanctuary
-                  </span>
-                  <h3 className="text-lg font-bold text-white">
-                    Private VIP Therapy Suites
-                  </h3>
-                  <p className="text-xs text-gray-200 mt-1">
-                    Sterilized linen, soothing aromatherapy & personalized wellness care.
-                  </p>
-                </div>
+              <div className="relative rounded-3xl overflow-hidden shadow-lg border border-gray-200 bg-gray-100 group min-h-[320px]">
+                {hasFeaturedImg ? (
+                  <>
+                    <img
+                      src={featuredImgUrl}
+                      alt={featuredImgAlt}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-80 sm:h-96 lg:h-[420px] object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = euroSpaLogo;
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-transparent to-transparent flex flex-col justify-end p-6 text-white">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-blue-300">
+                        Banani Luxury Spa Sanctuary
+                      </span>
+                      <h3 className="text-lg font-bold text-white">
+                        Private VIP Therapy Suites
+                      </h3>
+                      <p className="text-xs text-gray-200 mt-1">
+                        Sterilized linen, soothing aromatherapy & personalized wellness care.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full min-h-[320px] bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-8 flex flex-col justify-between text-white">
+                    <div className="flex items-center gap-2 text-amber-400">
+                      <Sparkles className="w-5 h-5" />
+                      <span className="text-xs font-bold uppercase tracking-widest">Euro Spa Sanctuary</span>
+                    </div>
+                    <div className="space-y-2">
+                      <h3 className="text-xl font-bold text-white">
+                        Private VIP Therapy Suites & Holistic Wellness
+                      </h3>
+                      <p className="text-xs text-slate-300 leading-relaxed">
+                        Sterilized linen, personalized aromatherapy & certified discreet therapists in Banani, Dhaka.
+                      </p>
+                    </div>
+                    <div className="text-[11px] text-slate-400 border-t border-white/10 pt-3">
+                      Open 10:00 AM – 10:00 PM Daily • Prior Appointment Recommended
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -481,7 +510,23 @@ export function AboutPage({
               </div>
             </div>
 
-            <div className="lg:col-span-4 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-5 space-y-4 text-center">
+            <div className="lg:col-span-4 bg-white/10 backdrop-blur-sm border border-white/15 rounded-2xl p-5 space-y-4 text-center overflow-hidden">
+              {hasFacilityImg && (
+                <div className="relative w-full h-40 rounded-xl overflow-hidden mb-2 border border-white/20 shadow-md">
+                  <img
+                    src={content.facilityImage}
+                    alt={content.facilityImageAlt || 'Private VIP Treatment Suite'}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover object-center hover:scale-105 transition-transform duration-500"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none';
+                    }}
+                  />
+                  <span className="absolute bottom-2 left-2 bg-black/70 backdrop-blur-xs text-[10px] text-white font-medium px-2 py-0.5 rounded-md">
+                    VIP Treatment Suite
+                  </span>
+                </div>
+              )}
               <span className="text-xs font-bold uppercase tracking-wider text-blue-300 block">
                 Reserve Your Private Suite
               </span>

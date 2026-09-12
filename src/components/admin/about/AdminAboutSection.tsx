@@ -23,6 +23,7 @@ import {
   AboutHighlight, 
   DEFAULT_ABOUT_CONTENT 
 } from '../../../services/aboutService';
+import { AdminImageControl } from '../common/AdminImageControl';
 
 interface AdminAboutSectionProps {
   currentUser: User | null;
@@ -131,6 +132,12 @@ export function AdminAboutSection({ currentUser }: AdminAboutSectionProps) {
       ...prev,
       highlights: prev.highlights.map(h => h.id === id ? { ...h, description } : h)
     }));
+  };
+
+  const handleImmediateImageSave = async (partialUpdate: Partial<AboutContent>) => {
+    const updated = { ...content, ...partialUpdate };
+    setContent(updated);
+    await updateAboutContent(updated, currentUser?.email || 'admin');
   };
 
   if (loading) {
@@ -265,84 +272,93 @@ export function AdminAboutSection({ currentUser }: AdminAboutSectionProps) {
           </div>
         </div>
 
-        {/* 2. Featured Image & Metrics */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-5">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-            <ImageIcon className="w-4 h-4 text-blue-600" />
-            <h3 className="text-sm font-bold text-slate-900">Featured Image & Trust Statistics</h3>
+        {/* 2. Visual Media & Imagery CMS */}
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-blue-600" />
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">About Page Image Management (Supabase Storage)</h3>
+                <p className="text-xs text-slate-500">
+                  Manage high-resolution imagery stored in the &apos;spa-assets&apos; bucket. Replace, upload, or remove with live preview.
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Featured About Image URL
-                </label>
-                <input
-                  type="url"
-                  value={content.featuredImage || ''}
-                  onChange={(e) => setContent(prev => ({ ...prev, featuredImage: e.target.value }))}
-                  placeholder="https://..."
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+          <div className="space-y-6">
+            {/* Featured About Story Photo */}
+            <AdminImageControl
+              label="Featured About Story Image"
+              description="Primary visual showcased next to the sanctuary narrative and overview text."
+              imageUrl={content.featuredImage || ''}
+              defaultFallbackUrl={DEFAULT_ABOUT_CONTENT.featuredImage}
+              altText={content.featuredImageAlt || ''}
+              onAltTextChange={(newAlt) => setContent(prev => ({ ...prev, featuredImageAlt: newAlt }))}
+              storageFolder="about"
+              aspectRatio="video"
+              recommendedDimensions="1200 × 800px (JPG, PNG, WEBP, max 10MB)"
+              onChange={(newUrl) => setContent(prev => ({ ...prev, featuredImage: newUrl }))}
+              onSaveImmediate={(newUrl) => handleImmediateImageSave({ featuredImage: newUrl })}
+            />
 
+            {/* About Page Brand Logo */}
+            <AdminImageControl
+              label="About Page Brand Logo"
+              description="Custom logo displayed in the top bar navigation. If unconfigured or removed, Euro Spa Center standard logo is displayed."
+              imageUrl={content.logoImage || ''}
+              storageFolder="about"
+              aspectRatio="square"
+              recommendedDimensions="500 × 500px square (PNG, WEBP, SVG, max 10MB)"
+              onChange={(newUrl) => setContent(prev => ({ ...prev, logoImage: newUrl }))}
+              onSaveImmediate={(newUrl) => handleImmediateImageSave({ logoImage: newUrl })}
+            />
+
+            {/* Sanctuary Facility & VIP Suite Photo */}
+            <AdminImageControl
+              label="Sanctuary Facility & VIP Suite Image"
+              description="High-resolution photography showcasing private VIP therapy rooms, sanitized beds, or ambience."
+              imageUrl={content.facilityImage || ''}
+              altText={content.facilityImageAlt || ''}
+              onAltTextChange={(newAlt) => setContent(prev => ({ ...prev, facilityImageAlt: newAlt }))}
+              storageFolder="about"
+              aspectRatio="video"
+              recommendedDimensions="1200 × 800px (JPG, PNG, WEBP, max 10MB)"
+              onChange={(newUrl) => setContent(prev => ({ ...prev, facilityImage: newUrl }))}
+              onSaveImmediate={(newUrl) => handleImmediateImageSave({ facilityImage: newUrl })}
+            />
+          </div>
+
+          {/* Trust Metrics Row */}
+          <div className="border-t border-slate-100 pt-4">
+            <h4 className="text-xs font-bold text-slate-800 mb-3 flex items-center gap-1.5">
+              <Award className="w-3.5 h-3.5 text-blue-600" />
+              <span>Trust Statistics & Experience Metrics</span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Image Alt Text (SEO)
+                  Years of Experience Badge
                 </label>
                 <input
                   type="text"
-                  value={content.featuredImageAlt || ''}
-                  onChange={(e) => setContent(prev => ({ ...prev, featuredImageAlt: e.target.value }))}
-                  placeholder="Euro Spa Center Interior & Ambience"
+                  value={content.yearsOfExperience || ''}
+                  onChange={(e) => setContent(prev => ({ ...prev, yearsOfExperience: e.target.value }))}
+                  placeholder="8+ Years"
                   className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-1">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Years of Experience
-                  </label>
-                  <input
-                    type="text"
-                    value={content.yearsOfExperience || ''}
-                    onChange={(e) => setContent(prev => ({ ...prev, yearsOfExperience: e.target.value }))}
-                    placeholder="8+ Years"
-                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Clients Served
-                  </label>
-                  <input
-                    type="text"
-                    value={content.clientsServed || ''}
-                    onChange={(e) => setContent(prev => ({ ...prev, clientsServed: e.target.value }))}
-                    placeholder="15,000+"
-                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Image Preview Box */}
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-2">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                Featured Image Preview
-              </span>
-              <div className="relative w-full h-40 rounded-xl overflow-hidden bg-slate-200 border border-slate-300">
-                <img
-                  src={content.featuredImage || DEFAULT_ABOUT_CONTENT.featuredImage}
-                  alt={content.featuredImageAlt || 'Preview'}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover object-center"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = DEFAULT_ABOUT_CONTENT.featuredImage!;
-                  }}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Clients Served Metric
+                </label>
+                <input
+                  type="text"
+                  value={content.clientsServed || ''}
+                  onChange={(e) => setContent(prev => ({ ...prev, clientsServed: e.target.value }))}
+                  placeholder="15,000+"
+                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>

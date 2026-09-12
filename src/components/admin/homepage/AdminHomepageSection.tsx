@@ -26,6 +26,7 @@ import {
   HomepageContent, 
   DEFAULT_HOMEPAGE_CONTENT 
 } from '../../../services/homepageService';
+import { AdminImageControl } from '../common/AdminImageControl';
 
 interface AdminHomepageSectionProps {
   currentUser: User | null;
@@ -74,6 +75,12 @@ export function AdminHomepageSection({ currentUser }: AdminHomepageSectionProps)
     if (window.confirm('Reset all homepage content back to default Euro Spa Center brand settings?')) {
       setContent(DEFAULT_HOMEPAGE_CONTENT);
     }
+  };
+
+  const handleImmediateImageSave = async (partialUpdate: Partial<HomepageContent>) => {
+    const updated = { ...content, ...partialUpdate };
+    setContent(updated);
+    await updateHomepageContent(updated, currentUser?.email || 'admin');
   };
 
   if (loading) {
@@ -144,82 +151,61 @@ export function AdminHomepageSection({ currentUser }: AdminHomepageSectionProps)
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
-        {/* 1. Hero Banner & Visual Identity */}
-        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-5">
-          <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-            <ImageIcon className="w-4 h-4 text-blue-600" />
-            <h3 className="text-sm font-bold text-slate-900">Hero Banner & Visual Media</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-            <div className="space-y-4">
+        {/* 1. Hero Banner, Logo & Homepage Visual Media CMS */}
+        <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-2xs space-y-6">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4 text-blue-600" />
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Hero Banner Image URL *
-                </label>
-                <input
-                  type="url"
-                  required
-                  value={content.heroBannerImage}
-                  onChange={(e) => setContent(prev => ({ ...prev, heroBannerImage: e.target.value }))}
-                  placeholder="https://..."
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-[11px] text-slate-400 mt-1">
-                  High-resolution photo displayed across the top of the homepage.
+                <h3 className="text-sm font-bold text-slate-900">Homepage Image Management (Supabase Storage)</h3>
+                <p className="text-xs text-slate-500">
+                  Manage hero banners, custom logos, and ambience photos stored in the &apos;spa-assets&apos; bucket.
                 </p>
               </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Banner Image Alt Text (SEO)
-                </label>
-                <input
-                  type="text"
-                  value={content.heroBannerAlt}
-                  onChange={(e) => setContent(prev => ({ ...prev, heroBannerAlt: e.target.value }))}
-                  placeholder="e.g. Euro Spa Center Ambience & Massage Room"
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Custom Logo URL (Optional)
-                </label>
-                <input
-                  type="url"
-                  value={content.logoImage || ''}
-                  onChange={(e) => setContent(prev => ({ ...prev, logoImage: e.target.value }))}
-                  placeholder="Leave empty to use Euro Spa Center standard logo"
-                  className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
             </div>
+          </div>
 
-            {/* Live Banner Preview Card */}
-            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
-                Live Banner Preview
-              </span>
-              <div className="relative w-full h-44 rounded-xl overflow-hidden bg-slate-200 border border-slate-300">
-                <img
-                  src={content.heroBannerImage}
-                  alt={content.heroBannerAlt}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover object-center"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = DEFAULT_HOMEPAGE_CONTENT.heroBannerImage;
-                  }}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent flex items-end p-3">
-                  <div className="text-white text-xs">
-                    <span className="font-bold block text-sm">{content.heroTitle || 'Euro Spa Center'}</span>
-                    <span className="text-white/80 text-[11px]">{content.heroTagline}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <div className="space-y-6">
+            {/* Hero Banner Image */}
+            <AdminImageControl
+              label="Homepage Hero Banner Image"
+              description="Primary high-resolution photo displayed across the hero banner at the top of the homepage."
+              imageUrl={content.heroBannerImage}
+              defaultFallbackUrl={DEFAULT_HOMEPAGE_CONTENT.heroBannerImage}
+              altText={content.heroBannerAlt}
+              onAltTextChange={(newAlt) => setContent(prev => ({ ...prev, heroBannerAlt: newAlt }))}
+              storageFolder="homepage"
+              aspectRatio="banner"
+              recommendedDimensions="1600 × 800px recommended (JPG, PNG, WEBP, max 10MB)"
+              onChange={(newUrl) => setContent(prev => ({ ...prev, heroBannerImage: newUrl }))}
+              onSaveImmediate={(newUrl) => handleImmediateImageSave({ heroBannerImage: newUrl })}
+            />
+
+            {/* Custom Brand Logo */}
+            <AdminImageControl
+              label="Custom Brand Logo Image"
+              description="Circular logo displayed prominently over the hero banner and in mobile navigation. If unconfigured or removed, Euro Spa Center standard logo is shown."
+              imageUrl={content.logoImage || ''}
+              storageFolder="homepage"
+              aspectRatio="square"
+              recommendedDimensions="500 × 500px square (PNG, WEBP, JPG, SVG, max 10MB)"
+              onChange={(newUrl) => setContent(prev => ({ ...prev, logoImage: newUrl }))}
+              onSaveImmediate={(newUrl) => handleImmediateImageSave({ logoImage: newUrl })}
+            />
+
+            {/* Ambience & Facility Feature Photo */}
+            <AdminImageControl
+              label="Homepage Ambience & Facility Feature Photo"
+              description="Optional highlight ambience or suite photo for the homepage wellness experience."
+              imageUrl={content.ambienceImage || ''}
+              altText={content.ambienceImageAlt || ''}
+              onAltTextChange={(newAlt) => setContent(prev => ({ ...prev, ambienceImageAlt: newAlt }))}
+              storageFolder="homepage"
+              aspectRatio="video"
+              recommendedDimensions="1200 × 800px (JPG, PNG, WEBP, max 10MB)"
+              onChange={(newUrl) => setContent(prev => ({ ...prev, ambienceImage: newUrl }))}
+              onSaveImmediate={(newUrl) => handleImmediateImageSave({ ambienceImage: newUrl })}
+            />
           </div>
         </div>
 

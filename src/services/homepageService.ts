@@ -11,6 +11,8 @@ export interface HomepageContent {
   locationBadge: string;
   statusBadge: string;
   logoImage?: string;
+  ambienceImage?: string;
+  ambienceImageAlt?: string;
   ratingOverride?: number;
   reviewsCountOverride?: number;
   announcementBanner?: {
@@ -41,6 +43,8 @@ export const DEFAULT_HOMEPAGE_CONTENT: HomepageContent = {
   locationBadge: SPA_INFO.locationShort || 'Banani, Dhaka',
   statusBadge: `Open · ${SPA_INFO.openingHours} Daily`,
   logoImage: '',
+  ambienceImage: '',
+  ambienceImageAlt: 'Euro Spa Ambience and Luxury Wellness Sanctuary',
   ratingOverride: SPA_INFO.rating || 4.9,
   reviewsCountOverride: SPA_INFO.reviewsCount || 21,
   announcementBanner: {

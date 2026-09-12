@@ -599,6 +599,21 @@ export async function deleteFromSupabaseStorage(
   }
 }
 
+/**
+ * Extracts relative storage file path from a Supabase Storage public URL.
+ * Returns null if the URL is not hosted in the specified Supabase Storage bucket.
+ */
+export function extractSupabaseStoragePath(url: string, bucketName: string = 'spa-assets'): string | null {
+  if (!url || typeof url !== 'string') return null;
+  const marker = `/${bucketName}/`;
+  const idx = url.indexOf(marker);
+  if (idx !== -1) {
+    const rawPath = url.substring(idx + marker.length);
+    return rawPath.split('?')[0].split('#')[0];
+  }
+  return null;
+}
+
 interface TableSubscription {
   channel: any;
   callbacks: Set<() => void>;
