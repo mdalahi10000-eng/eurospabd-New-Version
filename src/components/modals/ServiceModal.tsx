@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Clock, Check } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
 import { Service, PriceOption } from '../../types';
 import { SPA_INFO } from '../../data/spaData';
 
@@ -15,12 +15,24 @@ export function ServiceModal({
   onClose,
   onOpenBookingWithService
 }: ServiceModalProps) {
-  const [selectedOption, setSelectedOption] = useState<PriceOption | null>(null);
+  // Normalize options array from service to ensure every option from Admin is present
+  const options: PriceOption[] = (service?.priceOptions && Array.isArray(service.priceOptions) && service.priceOptions.length > 0)
+    ? service.priceOptions
+    : (service?.price
+        ? [{ duration: service.durationRange || '60 Minutes', price: service.price, amount: 0 }]
+        : [{ duration: '60 Minutes', price: 'BDT 5,500', amount: 5500 }]);
+
+  const [selectedIndex, setSelectedIndex] = useState<number>(0);
+
+  // Reset to first option whenever opened service changes
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [service?.id]);
 
   if (!service) return null;
 
-  // Default to first price option
-  const activeOption = selectedOption || service.priceOptions[0];
+  // Active option is selectedIndex or fallback to first option
+  const activeOption: PriceOption = options[selectedIndex] || options[0];
 
   const handleConfirmOnWhatsApp = () => {
     const text = encodeURIComponent(
@@ -89,20 +101,36 @@ export function ServiceModal({
               {service.fullDescription || service.shortDescription}
             </p>
 
-            {/* Price section */}
+            {/* Price section with all duration/price options */}
             <div className="mt-4 pt-3 border-t border-gray-100">
-              <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
-                Select Option
-              </span>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">
+                  Select Option
+                </span>
+                {options.length > 1 && (
+                  <span className="text-[11px] font-semibold text-neutral-500">
+                    {options.length} options available
+                  </span>
+                )}
+              </div>
 
-              <div className="mt-2 space-y-2">
-                {service.priceOptions.map((opt) => {
-                  const isSelected = activeOption.duration === opt.duration;
+              <div className="space-y-2">
+                {options.map((opt, idx) => {
+                  const isSelected = selectedIndex === idx;
                   return (
                     <div
-                      key={opt.duration}
-                      id={`price-option-${opt.duration.replace(/\s+/g, '-').toLowerCase()}`}
-                      onClick={() => setSelectedOption(opt)}
+                      key={`${opt.duration}-${idx}`}
+                      id={`price-option-${idx}-${opt.duration.replace(/\s+/g, '-').toLowerCase()}`}
+                      onClick={() => setSelectedIndex(idx)}
+                      role="radio"
+                      aria-checked={isSelected}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === ' ' || e.key === 'Enter') {
+                          e.preventDefault();
+                          setSelectedIndex(idx);
+                        }
+                      }}
                       className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
                         isSelected 
                           ? 'border-blue-600 bg-blue-50/60 shadow-2xs' 
@@ -118,7 +146,7 @@ export function ServiceModal({
                         }`}>
                           {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                         </div>
-                        <span className="text-xs sm:text-sm font-semibold text-gray-800">
+                        <span className={`text-xs sm:text-sm font-semibold ${isSelected ? 'text-blue-950 font-bold' : 'text-gray-800'}`}>
                           {opt.duration}
                         </span>
                       </div>

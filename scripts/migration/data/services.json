@@ -47,6 +47,11 @@
         "duration": "60 Minutes",
         "price": "BDT 6,500",
         "amount": 6500
+      },
+      {
+        "duration": "90 Minutes",
+        "price": "BDT 9,000",
+        "amount": 9000
       }
     ],
     "metaDescription": "Deep tissue massage in Banani, Dhaka designed to relieve muscle tension, support relaxation, and promote overall body wellness.",

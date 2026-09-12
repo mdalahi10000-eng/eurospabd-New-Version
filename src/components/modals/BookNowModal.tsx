@@ -33,8 +33,14 @@ export function BookNowModal({
   );
   const selectedService = allServices.find(s => s.id === selectedServiceId) || allServices[0];
 
+  const serviceOptions: PriceOption[] = (selectedService?.priceOptions && Array.isArray(selectedService.priceOptions) && selectedService.priceOptions.length > 0)
+    ? selectedService.priceOptions
+    : (selectedService?.price
+        ? [{ duration: selectedService.durationRange || '60 Minutes', price: selectedService.price, amount: 0 }]
+        : [{ duration: '60 Minutes', price: 'BDT 5,500', amount: 5500 }]);
+
   const [selectedDuration, setSelectedDuration] = useState<string>(
-    preselectedOption?.duration || selectedService.priceOptions[0]?.duration || '60 Minutes'
+    preselectedOption?.duration || serviceOptions[0]?.duration || '60 Minutes'
   );
 
   useEffect(() => {
@@ -47,8 +53,9 @@ export function BookNowModal({
       }
     }
   }, [preselectedService, preselectedOption]);
-  const activePriceOption = selectedService.priceOptions.find(p => p.duration === selectedDuration) 
-    || selectedService.priceOptions[0];
+
+  const activePriceOption = serviceOptions.find(p => p.duration === selectedDuration) 
+    || serviceOptions[0];
 
   const [date, setDate] = useState<string>(() => {
     const today = new Date();
@@ -222,7 +229,7 @@ export function BookNowModal({
                     2. Duration & Pricing
                   </label>
                   <div className="grid grid-cols-2 gap-2">
-                    {selectedService.priceOptions.map((opt) => {
+                    {serviceOptions.map((opt) => {
                       const isSelected = activePriceOption.duration === opt.duration;
                       return (
                         <button

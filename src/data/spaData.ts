@@ -83,21 +83,39 @@ export const SERVICES_DATA: Service[] = [
     ]
   },
   {
-  id: "swedish",
-  name: "Swedish Massage",
-  durationRange: "60 Minutes",
-  shortDescription: "A relaxing Swedish massage designed to ease muscle tension and promote overall relaxation.",
-  fullDescription: "A professional Swedish massage using smooth, flowing massage techniques to help relax the body and relieve everyday muscle tension.",
-  image: "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
-  priceOptions: [
-    { duration: "60 Minutes", price: "BDT 6,500", amount: 6500 }
-  ],
-  benefits: [
-    "Relieves muscle tension",
-    "Promotes relaxation",
-    "Calming massage experience"
-  ]
-}
+    id: "swedish",
+    name: "Swedish Massage",
+    durationRange: "60 / 90 Minutes",
+    shortDescription: "A relaxing Swedish massage designed to ease muscle tension and promote overall relaxation.",
+    fullDescription: "A professional Swedish massage using smooth, flowing massage techniques to help relax the body and relieve everyday muscle tension.",
+    image: "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    priceOptions: [
+      { duration: "60 Minutes", price: "BDT 5,500", amount: 5500 },
+      { duration: "90 Minutes", price: "BDT 7,500", amount: 7500 }
+    ],
+    benefits: [
+      "Relieves muscle tension",
+      "Promotes relaxation",
+      "Calming massage experience"
+    ]
+  },
+  {
+    id: "deep-tissue-massage",
+    name: "Deep Tissue Massage",
+    durationRange: "60 / 90 Minutes",
+    shortDescription: "Deep tissue massage in Banani, Dhaka designed to relieve muscle tension, support relaxation, and promote overall body wellness.",
+    fullDescription: "Deep tissue massage at Euro Spa Center in Banani, Dhaka uses focused massage techniques to help relieve muscle tension and promote relaxation.",
+    image: "https://lh3.googleusercontent.com/geougc/AF1QipPDGlDn8JiA8nC2xubXZCHfaV8c7sQkBsZr3iWL=w1200-h800-k-no",
+    priceOptions: [
+      { duration: "60 Minutes", price: "BDT 6,500", amount: 6500 },
+      { duration: "90 Minutes", price: "BDT 9,000", amount: 9000 }
+    ],
+    benefits: [
+      "Relieves muscle tension",
+      "Promotes deep relaxation",
+      "Improves blood circulation"
+    ]
+  }
 ];
 
 export const INITIAL_REVIEWS: ReviewItem[] = [

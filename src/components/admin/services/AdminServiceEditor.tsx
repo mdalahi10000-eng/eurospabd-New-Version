@@ -55,6 +55,22 @@ const AVAILABLE_LOCATIONS = [
   'Bashundhara'
 ];
 
+// Helper to compute clean duration range badge (e.g. "60 / 90 Minutes")
+export function computeDurationRange(options: PriceOption[]): string {
+  if (!options || options.length === 0) return '60 Minutes';
+  const cleanDurations = options.map(o => String(o.duration || '').trim()).filter(Boolean);
+  if (cleanDurations.length === 0) return '60 Minutes';
+  if (cleanDurations.length === 1) return cleanDurations[0];
+
+  // If all durations end in 'Minutes' or 'Min', extract numbers and format as "X / Y Minutes"
+  const allMinutes = cleanDurations.every(d => /^\d+\s*min(ute)?s?$/i.test(d));
+  if (allMinutes) {
+    const numbers = cleanDurations.map(d => d.replace(/[^\d]/g, ''));
+    return `${numbers.join(' / ')} Minutes`;
+  }
+  return cleanDurations.join(' / ');
+}
+
 export function AdminServiceEditor({
   service,
   onBack,
@@ -71,7 +87,6 @@ export function AdminServiceEditor({
   const [customCategory, setCustomCategory] = useState('');
   const [shortDescription, setShortDescription] = useState(service?.shortDescription || '');
   const [fullDescription, setFullDescription] = useState(service?.fullDescription || '');
-  const [durationRange, setDurationRange] = useState(service?.durationRange || '60 / 90 Minutes');
   const [displayOrder, setDisplayOrder] = useState<number>(service?.displayOrder ?? 0);
   const [status, setStatus] = useState<'active' | 'inactive'>(service?.status || 'active');
   const [popular, setPopular] = useState<boolean>(Boolean(service?.popular));
@@ -86,14 +101,25 @@ export function AdminServiceEditor({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Price Options
-  const [priceOptions, setPriceOptions] = useState<PriceOption[]>(
-    service?.priceOptions && service.priceOptions.length > 0
-      ? service.priceOptions
-      : [
-          { duration: '60 Minutes', price: 'BDT 5,500', amount: 5500 },
-          { duration: '90 Minutes', price: 'BDT 7,500', amount: 7500 }
-        ]
-  );
+  const [priceOptions, setPriceOptions] = useState<PriceOption[]>(() => {
+    if (service?.priceOptions && Array.isArray(service.priceOptions) && service.priceOptions.length > 0) {
+      return service.priceOptions;
+    }
+    return [
+      { duration: '60 Minutes', price: 'BDT 5,500', amount: 5500 },
+      { duration: '90 Minutes', price: 'BDT 7,500', amount: 7500 }
+    ];
+  });
+
+  const [durationRange, setDurationRange] = useState<string>(() => {
+    if (service?.durationRange && service.durationRange.trim()) {
+      return service.durationRange;
+    }
+    if (service?.priceOptions && service.priceOptions.length > 0) {
+      return computeDurationRange(service.priceOptions);
+    }
+    return '60 / 90 Minutes';
+  });
 
   // Benefits
   const [benefits, setBenefits] = useState<string[]>(
@@ -184,21 +210,54 @@ export function AdminServiceEditor({
 
   // Price Option Helpers
   const handleAddPriceOption = () => {
-    setPriceOptions([
+    const last = priceOptions[priceOptions.length - 1];
+    let nextDuration = '90 Minutes';
+    let nextPrice = 'BDT 7,500';
+    let nextAmount = 7500;
+
+    if (last) {
+      const matchMin = last.duration.match(/(\d+)/);
+      if (matchMin) {
+        const mins = parseInt(matchMin[1], 10);
+        const nextMins = mins === 30 ? 60 : mins === 60 ? 90 : mins === 90 ? 120 : mins + 30;
+        nextDuration = `${nextMins} Minutes`;
+        const lastAmt = last.amount || parseInt(String(last.price).replace(/[^\d]/g, ''), 10) || 5000;
+        nextAmount = Math.round((lastAmt * 1.35) / 500) * 500;
+        nextPrice = `BDT ${nextAmount.toLocaleString()}`;
+      }
+    }
+
+    const updated = [
       ...priceOptions,
-      { duration: '60 Minutes', price: 'BDT 5,500', amount: 5500 }
-    ]);
+      { duration: nextDuration, price: nextPrice, amount: nextAmount }
+    ];
+    setPriceOptions(updated);
+    setDurationRange(computeDurationRange(updated));
   };
 
   const handleUpdatePriceOption = (index: number, field: keyof PriceOption, val: any) => {
     const updated = [...priceOptions];
-    updated[index] = { ...updated[index], [field]: val };
+    if (field === 'amount') {
+      const num = Number(val) || 0;
+      updated[index] = {
+        ...updated[index],
+        amount: num,
+        price: num > 0 ? `BDT ${num.toLocaleString()}` : updated[index].price
+      };
+    } else {
+      updated[index] = { ...updated[index], [field]: val };
+    }
     setPriceOptions(updated);
+    if (field === 'duration') {
+      setDurationRange(computeDurationRange(updated));
+    }
   };
 
   const handleRemovePriceOption = (index: number) => {
     if (priceOptions.length > 1) {
-      setPriceOptions(priceOptions.filter((_, i) => i !== index));
+      const updated = priceOptions.filter((_, i) => i !== index);
+      setPriceOptions(updated);
+      setDurationRange(computeDurationRange(updated));
     }
   };
 
@@ -246,7 +305,22 @@ export function AdminServiceEditor({
     setSaving(true);
     setFeedback(null);
 
-    const primaryPrice = priceOptions[0]?.price || 'BDT 3,500';
+    // Normalize and clean each price option to ensure valid structure
+    const validPriceOptions = priceOptions
+      .map(o => ({
+        duration: o.duration.trim(),
+        price: o.price.trim() || (o.amount ? `BDT ${Number(o.amount).toLocaleString()}` : 'BDT 3,500'),
+        amount: Number(o.amount) || (parseInt(o.price.replace(/[^\d]/g, ''), 10) || 0)
+      }))
+      .filter(o => Boolean(o.duration));
+
+    const finalOptions = validPriceOptions.length > 0 ? validPriceOptions : [
+      { duration: '60 Minutes', price: 'BDT 5,500', amount: 5500 }
+    ];
+
+    const computedRange = computeDurationRange(finalOptions);
+    const finalDurationRange = durationRange.trim() || computedRange;
+    const primaryPrice = finalOptions[0]?.price || 'BDT 3,500';
     const finalCategory = customCategory.trim() || category;
 
     const payload = {
@@ -256,13 +330,13 @@ export function AdminServiceEditor({
       fullDescription: fullDescription.trim() || shortDescription.trim(),
       category: finalCategory,
       price: primaryPrice,
-      durationRange: durationRange.trim() || '60 Minutes',
+      durationRange: finalDurationRange,
       image: image.trim(),
       imageAlt: imageAlt.trim() || `${name.trim()} treatment at Euro Spa Center Banani`,
       popular: Boolean(popular),
       status: status,
       displayOrder: Number(displayOrder) || 0,
-      priceOptions: priceOptions,
+      priceOptions: finalOptions,
       benefits: benefits,
       bookingCta: bookingCta.trim() || 'Book This Treatment',
       serviceAreas: serviceAreas,
@@ -575,6 +649,32 @@ export function AdminServiceEditor({
                   )}
                 </div>
               ))}
+            </div>
+
+            {/* Duration Range Badge Display & Override */}
+            <div className="pt-3 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex-1">
+                <label className="block text-[10px] font-bold text-slate-500 mb-0.5">
+                  Card Duration Badge (e.g. "60 / 90 Minutes")
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={durationRange}
+                    onChange={(e) => setDurationRange(e.target.value)}
+                    placeholder="e.g. 60 / 90 Minutes"
+                    className="flex-1 px-2.5 py-1.5 bg-slate-50 focus:bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setDurationRange(computeDurationRange(priceOptions))}
+                    className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[11px] font-bold transition-colors cursor-pointer shrink-0"
+                    title="Auto-calculate badge from options list"
+                  >
+                    Auto-Sync
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

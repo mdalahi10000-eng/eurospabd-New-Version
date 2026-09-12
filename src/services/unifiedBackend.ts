@@ -6,6 +6,7 @@
 import { isSupabaseConfigured, getSupabase, uploadToSupabaseStorage, subscribeToSupabaseTable } from '../supabase';
 import { 
   Service, 
+  PriceOption,
   ReviewItem, 
   PhotoItem, 
   GalleryImage, 
@@ -22,20 +23,53 @@ export { isSupabaseConfigured };
 // 1. SERVICES
 // ==============================================================================
 export function mapSupabaseServiceToService(row: any): Service {
+  // Robust priceOptions parsing (handles arrays, JSON strings, or single fallbacks)
+  let parsedOptions: PriceOption[] = [];
+  if (Array.isArray(row.price_options)) {
+    parsedOptions = row.price_options;
+  } else if (typeof row.price_options === 'string' && row.price_options.trim()) {
+    try {
+      const parsed = JSON.parse(row.price_options);
+      if (Array.isArray(parsed)) {
+        parsedOptions = parsed;
+      }
+    } catch (_) {}
+  }
+
+  // Normalize and clean each price option
+  let cleanedOptions: PriceOption[] = parsedOptions
+    .map((opt: any) => ({
+      duration: String(opt.duration || '').trim(),
+      price: String(opt.price || '').trim() || (opt.amount ? `BDT ${Number(opt.amount).toLocaleString()}` : ''),
+      amount: typeof opt.amount === 'number' ? opt.amount : (parseInt(String(opt.price || '').replace(/[^\d]/g, ''), 10) || 0)
+    }))
+    .filter(opt => Boolean(opt.duration));
+
+  // Fallback: If no options found, synthesize from main row price/duration
+  if (cleanedOptions.length === 0 && row.price) {
+    cleanedOptions = [
+      {
+        duration: row.duration_range || '60 Minutes',
+        price: row.price,
+        amount: parseInt(String(row.price).replace(/[^\d]/g, ''), 10) || 0
+      }
+    ];
+  }
+
   return {
     id: row.id,
     name: row.name,
     slug: row.slug || '',
-    durationRange: row.duration_range || '60 / 90 Minutes',
+    durationRange: row.duration_range || (cleanedOptions.length > 0 ? cleanedOptions.map(o => o.duration).join(' / ') : '60 / 90 Minutes'),
     shortDescription: row.short_description || '',
     fullDescription: row.full_description || '',
     image: row.image || '',
     imageAlt: row.image_alt || '',
     galleryImages: Array.isArray(row.gallery_images) ? row.gallery_images : [],
     category: row.category || 'Massage Therapy',
-    price: row.price || '',
+    price: row.price || (cleanedOptions[0]?.price || ''),
     popular: Boolean(row.popular),
-    priceOptions: Array.isArray(row.price_options) ? row.price_options : [],
+    priceOptions: cleanedOptions,
     benefits: Array.isArray(row.benefits) ? row.benefits : [],
     bookingCta: row.booking_cta || 'Book Treatment',
     displayOrder: typeof row.display_order === 'number' ? row.display_order : 0,
