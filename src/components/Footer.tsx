@@ -12,7 +12,7 @@ export function Footer({ onWhatsAppClick, businessInfo, serviceAreas }: FooterPr
   const name = businessInfo?.businessName || SPA_INFO.name;
   const facebookUrl = businessInfo?.socialProfiles.facebook || 'https://www.facebook.com/profile.php?id=61592822445077';
   const instagramUrl = businessInfo?.socialProfiles.instagram || 'https://www.instagram.com/euro.spa.center/';
-  const whatsappNum = businessInfo?.whatsappNumber || SPA_INFO.whatsappNumber;
+  const whatsappNum = SPA_INFO.whatsappNumber;
 
   const handleWhatsApp = () => {
     if (onWhatsAppClick) {
