@@ -6,3 +6,6 @@ binding = "DB"
 database_name = "euro-spa-d1"
 database_id = "6415ca6a-6562-458e-bd68-0c5ea38f6bd4"
 migrations_dir = "migrations"
+[assets]
+directory = "./dist"
+not_found_handling = "single-page-application"
