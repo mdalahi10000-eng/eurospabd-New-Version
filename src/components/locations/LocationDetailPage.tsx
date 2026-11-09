@@ -77,6 +77,7 @@ export function LocationDetailPage({
       '@id': `${canonicalUrl}#local`,
       name: `${businessInfo.businessName || SEO_CONFIG.siteName} - Serving ${area.name}`,
       description: pageDescription,
+      image: `${SEO_CONFIG.canonicalBaseUrl}/photos/new_1.jpg`,
       url: canonicalUrl,
       telephone: businessInfo.phone,
       address: {
