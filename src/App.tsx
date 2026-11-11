@@ -594,6 +594,7 @@ useEffect(() => {
       {/* 1. Service Details Modal (Reference Image 2 matching) */}
       <ServiceModal
         service={selectedService}
+        whatsappNumber={businessInfo?.whatsappNumber}
         onClose={() => {
           setSelectedService(null);
           if (match.route === 'service-detail') {

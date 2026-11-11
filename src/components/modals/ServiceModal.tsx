@@ -8,12 +8,14 @@ interface ServiceModalProps {
   service: Service | null;
   onClose: () => void;
   onOpenBookingWithService?: (service: Service, option: PriceOption) => void;
+  whatsappNumber?: string;
 }
 
 export function ServiceModal({
   service,
   onClose,
-  onOpenBookingWithService
+  onOpenBookingWithService,
+  whatsappNumber
 }: ServiceModalProps) {
   // Normalize options array from service to ensure every option from Admin is present
   const options: PriceOption[] = (service?.priceOptions && Array.isArray(service.priceOptions) && service.priceOptions.length > 0)
@@ -35,10 +37,12 @@ export function ServiceModal({
   const activeOption: PriceOption = options[selectedIndex] || options[0];
 
   const handleConfirmOnWhatsApp = () => {
+    const rawNumber = (whatsappNumber && whatsappNumber.trim()) || SPA_INFO.whatsappNumber;
+    const sanitizedNumber = rawNumber.replace(/[^\d]/g, '') || SPA_INFO.whatsappNumber;
     const text = encodeURIComponent(
       `Hello ${SPA_INFO.name}, I would like to confirm a booking for ${service.name} (${activeOption.duration} - ${activeOption.price}). Please share available slots!`
     );
-    const url = `https://wa.me/${SPA_INFO.whatsappNumber}?text=${text}`;
+    const url = `https://wa.me/${sanitizedNumber}?text=${text}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
