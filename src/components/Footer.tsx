@@ -1,14 +1,15 @@
 import { SPA_INFO } from '../data/spaData';
-import { navigate } from '../router';
-import { BusinessInfo, ServiceArea } from '../types';
+import { Link } from './Link';
+import { BusinessInfo, ServiceArea, Service } from '../types';
 
 interface FooterProps {
   onWhatsAppClick?: () => void;
   businessInfo?: BusinessInfo;
   serviceAreas?: ServiceArea[];
+  services?: Service[];
 }
 
-export function Footer({ onWhatsAppClick, businessInfo, serviceAreas }: FooterProps) {
+export function Footer({ onWhatsAppClick, businessInfo, serviceAreas, services }: FooterProps) {
   const name = businessInfo?.businessName || SPA_INFO.name;
   const facebookUrl = businessInfo?.socialProfiles.facebook || 'https://www.facebook.com/profile.php?id=61592822445077';
   const instagramUrl = businessInfo?.socialProfiles.instagram || 'https://www.instagram.com/euro.spa.center/';
@@ -22,23 +23,42 @@ export function Footer({ onWhatsAppClick, businessInfo, serviceAreas }: FooterPr
     }
   };
 
+  const activeServices = (services || []).filter(s => s.status !== 'inactive');
   const activeLocations = (serviceAreas || []).filter(a => a.status === 'active').slice(0, 6);
 
   return (
     <footer className="w-full border-t border-gray-200 bg-white py-6 px-4">
       <div className="max-w-6xl mx-auto space-y-4">
+        {/* Services Navigation Links (crawlable) */}
+        {activeServices.length > 0 && (
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1.5 text-xs text-gray-500 pb-3 border-b border-gray-100">
+            <span className="font-semibold text-gray-700">Our Services:</span>
+            {activeServices.map((svc, idx) => (
+              <span key={svc.id} className="flex items-center gap-2">
+                <Link
+                  to={`/services/${svc.slug || svc.id}`}
+                  className="hover:text-blue-600 transition-colors cursor-pointer"
+                >
+                  {svc.name}
+                </Link>
+                {idx < activeServices.length - 1 && <span className="text-gray-300">•</span>}
+              </span>
+            ))}
+          </div>
+        )}
+
         {/* Service Areas Navigation Links */}
         {activeLocations.length > 0 && (
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-3 gap-y-1.5 text-xs text-gray-500 pb-3 border-b border-gray-100">
             <span className="font-semibold text-gray-700">Target Service Areas:</span>
             {activeLocations.map((loc, idx) => (
               <span key={loc.id} className="flex items-center gap-2">
-                <button
-                  onClick={() => navigate(`/locations/${loc.slug}`)}
+                <Link
+                  to={`/locations/${loc.slug}`}
                   className="hover:text-blue-600 transition-colors cursor-pointer"
                 >
                   {loc.name}
-                </button>
+                </Link>
                 {idx < activeLocations.length - 1 && <span className="text-gray-300">•</span>}
               </span>
             ))}
@@ -49,19 +69,19 @@ export function Footer({ onWhatsAppClick, businessInfo, serviceAreas }: FooterPr
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
             <p>&copy; 2026 {name}. All Rights Reserved.</p>
             <span className="hidden sm:inline text-gray-300">•</span>
-            <button
-              onClick={() => navigate('/about')}
+            <Link
+              to="/about"
               className="text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
             >
               About Us
-            </button>
+            </Link>
             <span className="text-gray-300">•</span>
-            <button
-              onClick={() => navigate('/blog')}
+            <Link
+              to="/blog"
               className="text-gray-500 hover:text-blue-600 transition-colors cursor-pointer"
             >
               Wellness Blog
-            </button>
+            </Link>
           </div>
 
           {/* Social Icons */}

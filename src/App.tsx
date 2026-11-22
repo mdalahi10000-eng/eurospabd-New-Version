@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { subscribeToReviews, StoredReview, User, getSupabase, formatSupabaseUser } from './supabase';
 import { SPA_INFO, SERVICES_DATA, PHOTOS_DATA } from './data/spaData';
 import { Service, PriceOption, PhotoItem, BusinessInfo, ServiceArea } from './types';
@@ -37,11 +37,16 @@ import { CallModal } from './components/modals/CallModal';
 import { MenuDrawer } from './components/modals/MenuDrawer';
 
 import { useLocationPath, navigate } from './router';
-import { AdminLayout } from './components/admin/AdminLayout';
+// Admin panel is loaded only when /admin is opened (keeps the public site fast)
+const AdminLayout = lazy(() =>
+  import('./components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout }))
+);
 import { BlogListPage } from './components/blog/BlogListPage';
 import { ArticleDetailPage } from './components/blog/ArticleDetailPage';
 import { LocationDetailPage } from './components/locations/LocationDetailPage';
 import { AboutPage } from './components/AboutPage';
+import { ServiceDetailPage } from './components/services/ServiceDetailPage';
+import { NotFoundPage } from './components/NotFoundPage';
 import { updatePageSeo, SEO_CONFIG, buildCanonicalUrl } from './config/seoConfig';
 
 export default function App() {
@@ -164,7 +169,16 @@ useEffect(() => {
 
   // Centralized SEO restoration for all public routes
 useEffect(() => {
-  if (match.route === 'home') {
+  if (match.route === 'home' && match.params.slug === 'services') {
+    updatePageSeo({
+      title: `Spa & Massage Services and Prices in Banani, Dhaka | ${SEO_CONFIG.siteName}`,
+      description: `All spa and massage treatments at ${SEO_CONFIG.siteName} in Banani, Dhaka with durations and prices.`,
+      canonicalUrl: buildCanonicalUrl('/services'),
+      ogImage: SEO_CONFIG.defaultOgImage,
+      ogType: 'website'
+    });
+    setTimeout(() => document.getElementById('section-services')?.scrollIntoView({ behavior: 'smooth' }), 300);
+  } else if (match.route === 'home') {
     updatePageSeo({
       title: SEO_CONFIG.defaultTitle,
       description: SEO_CONFIG.defaultMetaDescription,
@@ -172,27 +186,6 @@ useEffect(() => {
       ogImage: SEO_CONFIG.defaultOgImage,
       ogType: 'website'
     });
-  } else if (match.route === 'service-detail' && match.params.slug) {
-    const slug = match.params.slug;
-    const matchedSvc = services.find(s => s.slug === slug || s.id === slug);
-
-    if (matchedSvc) {
-      setSelectedService(matchedSvc);
-
-      updatePageSeo({
-        title:
-          matchedSvc.seoTitle ||
-          `${matchedSvc.name} in Banani, Dhaka | ${SEO_CONFIG.siteName}`,
-        description:
-          matchedSvc.metaDescription || matchedSvc.shortDescription,
-        canonicalUrl: buildCanonicalUrl(`/services/${slug}`),
-        ogImage:
-          matchedSvc.ogImage ||
-          matchedSvc.image ||
-          SEO_CONFIG.defaultOgImage,
-        ogType: 'product'
-      });
-    }
   } else if (match.route === 'location-detail' && match.params.slug) {
     const slug = match.params.slug;
     const matchedArea = serviceAreas.find(area => area.slug === slug);
@@ -331,7 +324,11 @@ useEffect(() => {
 
   // Route 1: Protected Admin Panel
   if (match.route === 'admin') {
-    return <AdminLayout />;
+    return (
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-sm text-gray-500">Loading admin…</div>}>
+        <AdminLayout />
+      </Suspense>
+    );
   }
 
   // Route 2: Public Blog Articles Listing
@@ -424,6 +421,7 @@ useEffect(() => {
           onWhatsAppClick={handleWhatsAppAction}
           businessInfo={businessInfo}
           serviceAreas={serviceAreas}
+          services={services}
         />
         <BookNowModal
           isOpen={isBookNowModalOpen}
@@ -449,6 +447,67 @@ useEffect(() => {
     );
   }
 
+  // Route 4b: Full Service Detail Page (/services/:slug)
+  if (match.route === 'service-detail' && match.params.slug) {
+    return (
+      <>
+        <ServiceDetailPage
+          slug={match.params.slug}
+          services={services}
+          loading={servicesLoading}
+          businessInfo={businessInfo}
+          onOpenBookNow={(service, option) => {
+            setBookingPreselectedService(service || null);
+            setBookingPreselectedOption(option || null);
+            setIsBookNowModalOpen(true);
+          }}
+          onOpenCallModal={() => setIsCallModalOpen(true)}
+        />
+        <Footer
+          onWhatsAppClick={handleWhatsAppAction}
+          businessInfo={businessInfo}
+          serviceAreas={serviceAreas}
+          services={services}
+        />
+        <BookNowModal
+          isOpen={isBookNowModalOpen}
+          onClose={() => setIsBookNowModalOpen(false)}
+          currentUser={currentUser}
+          onCallClick={() => {
+            setIsBookNowModalOpen(false);
+            setIsCallModalOpen(true);
+          }}
+          preselectedService={bookingPreselectedService}
+          preselectedOption={bookingPreselectedOption}
+          onBookingSuccess={() => showToast('Appointment booked successfully!')}
+          availableServices={services}
+        />
+        <CallModal
+          isOpen={isCallModalOpen}
+          onClose={() => setIsCallModalOpen(false)}
+          onWhatsAppClick={handleWhatsAppAction}
+          businessInfo={businessInfo}
+        />
+        <ShareToast message={toastMessage} onClose={() => setToastMessage(null)} />
+      </>
+    );
+  }
+
+  // Route 4c: Unknown URL -> real "Page Not Found" (noindex)
+  if (match.route === 'not-found') {
+    return (
+      <>
+        <NotFoundPage services={services} />
+        <Footer
+          onWhatsAppClick={handleWhatsAppAction}
+          businessInfo={businessInfo}
+          serviceAreas={serviceAreas}
+          services={services}
+        />
+      </>
+    );
+  }
+
   // Route 5: Public Dedicated About Us Page (/about)
   if (match.route === 'about') {
     return (
@@ -468,6 +527,7 @@ useEffect(() => {
           onWhatsAppClick={handleWhatsAppAction}
           businessInfo={businessInfo}
           serviceAreas={serviceAreas}
+          services={services}
         />
         <BookNowModal
           isOpen={isBookNowModalOpen}
@@ -528,7 +588,7 @@ useEffect(() => {
           services={services}
           loading={servicesLoading}
           error={servicesError}
-          onSelectService={(service) => setSelectedService(service)}
+          onSelectService={() => { /* card is a link to /services/:slug */ }}
           onViewAllServices={() => {
             setBookingPreselectedService(null);
             setBookingPreselectedOption(null);
@@ -587,6 +647,7 @@ useEffect(() => {
         onWhatsAppClick={handleWhatsAppAction}
         businessInfo={businessInfo}
         serviceAreas={serviceAreas}
+        services={services}
       />
 
      

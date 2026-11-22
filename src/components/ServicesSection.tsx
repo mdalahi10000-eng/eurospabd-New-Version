@@ -1,5 +1,6 @@
 import { ChevronRight } from 'lucide-react';
 import { Service } from '../types';
+import { Link } from './Link';
 
 interface ServicesSectionProps {
   onSelectService: (service: Service) => void;
@@ -58,11 +59,12 @@ export function ServicesSection({
       ) : (
         <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 no-scrollbar snap-x">
           {services.map((service) => (
-            <button
+            <Link
               key={service.id}
               id={`service-card-${service.id}`}
+              to={`/services/${service.slug || service.id}`}
               onClick={() => onSelectService(service)}
-              className="group shrink-0 w-36 sm:w-44 text-left bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:border-blue-300 hover:shadow-md transition-all active:scale-98 snap-start cursor-pointer focus:outline-none"
+              className="group block shrink-0 w-36 sm:w-44 text-left bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-xs hover:border-blue-300 hover:shadow-md transition-all active:scale-98 snap-start cursor-pointer focus:outline-none"
             >
               {/* Image */}
               <div className="relative h-24 sm:h-28 w-full overflow-hidden bg-gray-100">
@@ -89,7 +91,7 @@ export function ServicesSection({
                   {service.durationRange}
                 </p>
               </div>
-            </button>
+            </Link>
           ))}
         </div>
       )}

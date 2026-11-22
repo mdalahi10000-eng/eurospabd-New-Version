@@ -15,7 +15,7 @@ export const INITIAL_FAQS: Omit<FAQItem, 'createdAt' | 'updatedAt'>[] = [
   {
     id: 'faq-2',
     question: 'Do I need an advance appointment or do you accept walk-ins?',
-    answer: 'While we welcome walk-ins based on therapist availability, we strongly recommend booking in advance via our website, direct phone call (01842-658423), or WhatsApp to ensure your preferred suite and therapist are ready upon arrival.',
+    answer: 'While we welcome walk-ins based on therapist availability, we strongly recommend booking in advance via our website, direct phone call (01328-253172), or WhatsApp to ensure your preferred suite and therapist are ready upon arrival.',
     category: 'Bookings',
     displayOrder: 2,
     status: 'active'
