@@ -16,7 +16,8 @@ import {
 import { ServiceArea, Service, BusinessInfo } from '../../types';
 import { fetchServiceAreaBySlug } from '../../services/localSeoService';
 import { navigate } from '../../router';
-import { updatePageSeo, SEO_CONFIG, buildCanonicalUrl, setCanonicalUrl } from '../../config/seoConfig';
+import { Link } from '../Link';
+import { updatePageSeo, SEO_CONFIG, buildCanonicalUrl, setCanonicalUrl, markPageNotFound } from '../../config/seoConfig';
 
 interface LocationDetailPageProps {
   slug: string;
@@ -129,6 +130,7 @@ export function LocationDetailPage({
 
   // Not found or inactive
   if (!area || area.status === 'inactive') {
+    markPageNotFound();
     return (
       <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto">
         <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
@@ -159,13 +161,13 @@ export function LocationDetailPage({
       <div className="bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-2xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <button
-              onClick={() => navigate('/')}
+            <Link
+              to="/"
               className="hover:text-blue-600 flex items-center gap-1 cursor-pointer font-medium"
             >
               <Home className="w-3.5 h-3.5" />
               <span>Home</span>
-            </button>
+            </Link>
             <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
             <span className="text-slate-400">Locations</span>
             <ChevronRight className="w-3.5 h-3.5 text-slate-300" />
@@ -274,7 +276,9 @@ export function LocationDetailPage({
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <h4 className="text-sm font-bold text-slate-900">
-                        {service.name}
+                        <Link to={`/services/${service.slug || service.id}`} className="hover:text-blue-600">
+                          {service.name}
+                        </Link>
                       </h4>
                       <span className="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full whitespace-nowrap">
                         {service.durationRange}

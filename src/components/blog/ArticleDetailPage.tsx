@@ -16,6 +16,7 @@ import {
 import { Article } from '../../types';
 import { fetchArticleBySlug, fetchRelatedArticles } from '../../services/articlesService';
 import { navigate } from '../../router';
+import { Link } from '../Link';
 import { SPA_INFO, SERVICES_DATA } from '../../data/spaData';
 import { updatePageSeo, SEO_CONFIG, buildCanonicalUrl, setCanonicalUrl } from '../../config/seoConfig';
 import euroSpaLogo from '../../assets/Untitled design (4).jpg';
@@ -223,9 +224,9 @@ export function ArticleDetailPage({ slug, onBookNowClick, onWhatsAppClick }: Art
 
       {/* Breadcrumb Navigation */}
       <nav className="max-w-4xl mx-auto w-full px-4 pt-6 pb-2 text-xs text-gray-500 flex items-center gap-2">
-        <button onClick={() => navigate('/')} className="hover:text-gray-900 cursor-pointer">Home</button>
+        <Link to="/" className="hover:text-gray-900 cursor-pointer">Home</Link>
         <ChevronRight className="w-3 h-3 text-gray-400" />
-        <button onClick={() => navigate('/blog')} className="hover:text-gray-900 cursor-pointer">Blog</button>
+        <Link to="/blog" className="hover:text-gray-900 cursor-pointer">Blog</Link>
         <ChevronRight className="w-3 h-3 text-gray-400" />
         <span className="text-gray-900 font-medium truncate max-w-xs">{article.category || 'Therapy'}</span>
       </nav>
@@ -454,7 +455,9 @@ export function ArticleDetailPage({ slug, onBookNowClick, onWhatsAppClick }: Art
                   </div>
                   <div className="p-4 flex-1 flex flex-col justify-between">
                     <h4 className="text-xs font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2 leading-snug">
-                      {rel.title}
+                      <Link to={`/blog/${rel.slug}`} onClick={(e) => e.stopPropagation()}>
+                        {rel.title}
+                      </Link>
                     </h4>
                     <span className="text-[11px] text-gray-500 flex items-center gap-1">
                       <Clock className="w-3 h-3 text-gray-400" />

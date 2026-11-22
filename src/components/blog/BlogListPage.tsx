@@ -5,6 +5,7 @@ import { Article } from '../../types';
 import { fetchPublishedArticles, getInitialArticles, subscribeToPublishedArticles } from '../../services/articlesService';
 import { hasCachedData, CACHE_KEYS } from '../../services/cacheService';
 import { navigate } from '../../router';
+import { Link } from '../Link';
 import { SPA_INFO } from '../../data/spaData';
 import { updatePageSeo, SEO_CONFIG, buildCanonicalUrl, setCanonicalUrl } from '../../config/seoConfig';
 import euroSpaLogo from '../../assets/Untitled design (4).jpg';
@@ -240,7 +241,9 @@ export function BlogListPage({ onBookNowClick, onWhatsAppClick }: BlogListPagePr
                     </div>
 
                     <h2 className="text-base font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug mb-2">
-                      {article.title}
+                      <Link to={`/blog/${article.slug}`} onClick={(e) => e.stopPropagation()}>
+                        {article.title}
+                      </Link>
                     </h2>
 
                     <p className="text-xs text-gray-600 line-clamp-3 leading-relaxed">
@@ -254,16 +257,14 @@ export function BlogListPage({ onBookNowClick, onWhatsAppClick }: BlogListPagePr
                   <span className="text-[11px] text-gray-500 font-medium truncate max-w-[140px]">
                     By {article.author || 'Euro Spa Team'}
                   </span>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/blog/${article.slug}`);
-                    }}
+                  <Link
+                    to={`/blog/${article.slug}`}
+                    onClick={(e) => e.stopPropagation()}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
                     <span>Read More</span>
                     <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  </Link>
                 </div>
               </motion.article>
             ))}
@@ -278,9 +279,9 @@ export function BlogListPage({ onBookNowClick, onWhatsAppClick }: BlogListPagePr
             <span>&copy; 2026 {SPA_INFO.name}. All Rights Reserved.</span>
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/')} className="hover:text-gray-900 transition-colors cursor-pointer">
+            <Link to="/" className="hover:text-gray-900 transition-colors cursor-pointer">
               Home
-            </button>
+            </Link>
             <button onClick={() => navigate('/blog')} className="text-blue-600 font-semibold cursor-pointer">
               Wellness Blog
             </button>

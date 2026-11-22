@@ -1,3 +1,4 @@
+import { Link } from './Link';
 export type TabType = 'overview' | 'services' | 'photos' | 'reviews' | 'location' | 'blog';
 
 interface NavTabsProps {
@@ -21,18 +22,33 @@ export function NavTabs({ activeTab, onSelectTab }: NavTabsProps) {
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
+            tab.id === 'blog' ? (
+              <Link
+                key={tab.id}
+                id={`tab-${tab.id}`}
+                to="/blog"
+                className={`flex-1 sm:flex-initial text-center py-3 px-3 text-xs sm:text-sm font-bold tracking-wider whitespace-nowrap transition-colors cursor-pointer relative ${
+                  isActive
+                    ? 'text-blue-600 border-b-2 border-blue-600'
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                {tab.label}
+              </Link>
+            ) : (
             <button
-              key={tab.id}
-              id={`tab-${tab.id}`}
-              onClick={() => onSelectTab(tab.id)}
-              className={`flex-1 sm:flex-initial text-center py-3 px-3 text-xs sm:text-sm font-bold tracking-wider whitespace-nowrap transition-colors cursor-pointer relative ${
-                isActive 
-                  ? 'text-blue-600 border-b-2 border-blue-600' 
-                  : 'text-gray-500 hover:text-gray-800'
-              }`}
-            >
-              {tab.label}
-            </button>
+                key={tab.id}
+                id={`tab-${tab.id}`}
+                onClick={() => onSelectTab(tab.id)}
+                className={`flex-1 sm:flex-initial text-center py-3 px-3 text-xs sm:text-sm font-bold tracking-wider whitespace-nowrap transition-colors cursor-pointer relative ${
+                  isActive 
+                    ? 'text-blue-600 border-b-2 border-blue-600' 
+                    : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                {tab.label}
+              </button>
+            )
           );
         })}
       </div>

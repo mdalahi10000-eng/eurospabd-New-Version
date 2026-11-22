@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-export type RouteType = 'home' | 'admin' | 'blog' | 'blog-detail' | 'location-detail' | 'service-detail' | 'about';
+export type RouteType = 'home' | 'admin' | 'blog' | 'blog-detail' | 'location-detail' | 'service-detail' | 'about' | 'not-found';
 
 export interface RouteMatch {
   route: RouteType;
@@ -50,7 +50,23 @@ export function parseRoute(pathname: string): RouteMatch {
     }
   }
 
-  return { route: 'home', params: {} };
+  if (cleanPath === '/' || cleanPath === '/index.html') {
+    return { route: 'home', params: {} };
+  }
+
+  // Unknown URL: show a real "not found" page (noindex) instead of the homepage
+  return { route: 'not-found', params: {} };
+}
+
+/** Old URLs that should permanently point somewhere else (e.g. Google Ads landing page). */
+const LEGACY_REDIRECTS: Record<string, string> = {
+  '/spa/dhaka': '/',
+  '/home': '/',
+};
+
+export function resolveLegacyRedirect(pathname: string): string | null {
+  const cleanPath = pathname.replace(/\/+$/, '') || '/';
+  return LEGACY_REDIRECTS[cleanPath.toLowerCase()] || null;
 }
 
 export function navigate(to: string, replace = false): void {
@@ -71,7 +87,14 @@ export function navigate(to: string, replace = false): void {
 }
 
 export function useLocationPath(): { path: string; match: RouteMatch } {
-  const [path, setPath] = useState<string>(() => window.location.pathname);
+  const [path, setPath] = useState<string>(() => {
+    const redirect = resolveLegacyRedirect(window.location.pathname);
+    if (redirect) {
+      window.history.replaceState({}, '', redirect + window.location.search);
+      return redirect;
+    }
+    return window.location.pathname;
+  });
 
   useEffect(() => {
     const handleLocationChange = () => {

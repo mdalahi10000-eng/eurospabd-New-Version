@@ -25,10 +25,10 @@ export const DEFAULT_BUSINESS_INFO: BusinessInfo = {
     'Massage Therapist',
     'Aromatherapy Service'
   ],
-  phone: SPA_INFO.phone || '+880 1842-658423',
-  displayPhone: SPA_INFO.displayPhone || '01842-658423',
-  whatsappNumber: SPA_INFO.whatsappNumber || '8801842658423',
-  whatsappFormatted: SPA_INFO.whatsappFormatted || '+880 1842-658423',
+  phone: SPA_INFO.phone || '+880 1328-253172',
+  displayPhone: SPA_INFO.displayPhone || '01328-253172',
+  whatsappNumber: SPA_INFO.whatsappNumber || '8801328253172',
+  whatsappFormatted: SPA_INFO.whatsappFormatted || '+880 1328-253172',
   email: SPA_INFO.email || 'info@eurospacenter.com',
   websiteUrl: 'https://eurospabd.com/',
 

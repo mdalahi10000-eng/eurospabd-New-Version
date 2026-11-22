@@ -125,3 +125,15 @@ export function updatePageSeo(options: {
     updateMetaTag('name', 'keywords', options.keywords.join(', '));
   }
 }
+
+/**
+ * Marks the current page as "not found" for search engines:
+ * sets robots noindex and a "Page Not Found" title so Google
+ * does not index empty / invalid URLs (prevents soft-404s).
+ */
+export function markPageNotFound(): void {
+  if (typeof document === 'undefined') return;
+  document.title = `Page Not Found | ${SEO_CONFIG.siteName}`;
+  updateMetaTag('name', 'robots', 'noindex, follow');
+  document.querySelectorAll('link[rel="canonical"]').forEach((l) => l.remove());
+}
