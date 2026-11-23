@@ -160,6 +160,28 @@ export function ServiceDetailPage({
     .map((p) => p.trim())
     .filter(Boolean);
 
+  const priceList = (service.priceOptions || [])
+    .filter((o) => o.duration && o.price)
+    .map((o) => `${o.duration}: ${o.price}`)
+    .join(', ');
+  const faqs = [
+    {
+      q: `Where can I book ${service.name} near Banani and Gulshan?`,
+      a: `${businessInfo.businessName || SEO_CONFIG.siteName} is at ${businessInfo.fullAddress}, close to Gulshan. Use Get Directions to open the location in Google Maps.`
+    },
+    ...(priceList
+      ? [{ q: `How much does ${service.name} cost in ${areaName}?`, a: `${service.name} prices at ${businessInfo.businessName || SEO_CONFIG.siteName}: ${priceList}.` }]
+      : []),
+    {
+      q: 'What are your opening hours?',
+      a: `We are open ${businessInfo.displayHours}.`
+    },
+    {
+      q: `How do I book ${service.name}?`,
+      a: `Press Book This Treatment, or call or WhatsApp us on ${businessInfo.displayPhone || businessInfo.phone}.`
+    }
+  ];
+
   return (
     <div className="min-h-screen bg-slate-50/50 pb-16">
       {/* Breadcrumb */}
@@ -308,6 +330,21 @@ export function ServiceDetailPage({
               </ul>
             </section>
           )}
+
+          {/* FAQ */}
+          <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-2xs">
+            <h2 className="text-xl font-bold text-slate-900 mb-4">
+              {service.name} in {areaName} – Common Questions
+            </h2>
+            <div className="space-y-4">
+              {faqs.map((f) => (
+                <div key={f.q}>
+                  <h3 className="text-sm font-bold text-slate-900 mb-1">{f.q}</h3>
+                  <p className="text-sm text-slate-600 leading-relaxed">{f.a}</p>
+                </div>
+              ))}
+            </div>
+          </section>
 
           {/* Other services */}
           {otherServices.length > 0 && (
