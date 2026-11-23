@@ -58,7 +58,7 @@ export function LocationDetailPage({
   useEffect(() => {
     if (!area) return;
 
-    const pageTitle = area.seoTitle || `Spa & Massage Center in ${area.name}, Dhaka | ${businessInfo.businessName || SEO_CONFIG.siteName}`;
+    const pageTitle = area.seoTitle || (area.slug === 'banani' ? `Spa in Banani, Dhaka | Body Massage | ${businessInfo.businessName || SEO_CONFIG.siteName}` : area.slug === 'dhaka' ? `Spa & Massage Center in Dhaka | ${businessInfo.businessName || SEO_CONFIG.siteName}` : `Spa & Massage near ${area.name}, Dhaka | ${businessInfo.businessName || SEO_CONFIG.siteName}`);
     const pageDescription = area.metaDescription || area.shortDescription || businessInfo.description || SEO_CONFIG.defaultMetaDescription;
     const canonicalUrl = buildCanonicalUrl(`/locations/${area.slug}`);
 
