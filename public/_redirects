@@ -2,3 +2,13 @@
 /spa/dhaka /  301
 /spa/dhaka/ /  301
 /home /  301
+
+# Retired service pages (no longer offered) -> services overview
+/services/couple-massage /services 301
+/services/couple-massage/ /services 301
+/services/four-hands-massage /services 301
+/services/four-hands-massage/ /services 301
+/services/scrub-massage /services 301
+/services/scrub-massage/ /services 301
+/services/body-scrub /services 301
+/services/body-scrub/ /services 301

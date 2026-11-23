@@ -1,0 +1,7 @@
+# Hashed build assets never change -> cache for a year
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Static images: cache for a week (filenames are not hashed)
+/photos/*
+  Cache-Control: public, max-age=604800

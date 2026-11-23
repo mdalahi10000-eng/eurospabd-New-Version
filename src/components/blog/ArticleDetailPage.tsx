@@ -42,7 +42,7 @@ export function ArticleDetailPage({ slug, onBookNowClick, onWhatsAppClick }: Art
           const canonicalUrl = art.canonicalUrl || buildCanonicalUrl(`/blog/${art.slug}`);
           const ogImageUrl = art.ogImage || (art.featuredImage?.startsWith('http') 
             ? art.featuredImage 
-            : `${SEO_CONFIG.canonicalBaseUrl}${art.featuredImage || '/euro_spa_logo_clean.png'}`);
+            : `${SEO_CONFIG.canonicalBaseUrl}${art.featuredImage || '/photos/logo.jpg'}`);
 
           // Centralized SEO update
           updatePageSeo({

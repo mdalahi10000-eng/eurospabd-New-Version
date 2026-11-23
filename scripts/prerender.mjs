@@ -339,7 +339,6 @@ function businessSchema(b, areas) {
     description: b.description,
     url: `${BASE_URL}/`,
     telephone: String(b.phone).replace(/[^\d+]/g, ''),
-    ...(b.email ? { email: b.email } : {}),
     logo: `${BASE_URL}/photos/logo.jpg`,
     image: [`${BASE_URL}/photos/entrance.jpg`, `${BASE_URL}/photos/reception_desk.jpg`, `${BASE_URL}/photos/logo.jpg`],
     priceRange: b.priceRange,
@@ -477,7 +476,7 @@ async function main() {
     {
       path: '/',
       title: `${SITE_NAME} | Spa & Massage Center in ${where}`,
-      description: `${SITE_NAME} is a spa and massage center at ${b.fullAddress}. Swedish, deep tissue, aromatherapy, hot stone and oil massage. Open ${b.displayHours}. Call ${b.displayPhone}.`,
+      description: `${SITE_NAME}, ${where}: Swedish, deep tissue, hot stone, aromatherapy and oil massage. Open daily 10 AM–10 PM. Call or WhatsApp ${b.displayPhone}.`,
       image: '/photos/logo.jpg',
       schemas: faqs.length
         ? [
@@ -515,8 +514,8 @@ ${faqs.length ? `<h2>Frequently Asked Questions</h2>${faqs.map((f) => `<h3>${esc
   add(
     {
       path: '/services',
-      title: `Spa & Massage Services and Prices in ${where} | ${SITE_NAME}`,
-      description: `All spa and massage treatments at ${SITE_NAME} in ${where} with durations and prices: ${data.services.map((s) => s.name).join(', ')}.`,
+      title: `Massage Services & Prices in ${where} | ${SITE_NAME}`,
+      description: `All spa and massage treatments at ${SITE_NAME} in ${where} with durations and prices. Swedish, deep tissue, hot stone, aromatherapy, dry and oil massage.`,
       schemas: [breadcrumbs([['Home', '/'], ['Services', '/services']])],
       body: `<h1>Spa & Massage Services in ${esc(where)}</h1>${serviceListHtml(data.services, 'All Treatments & Prices')}`
     },
@@ -598,7 +597,7 @@ ${serviceListHtml(data.services, `Popular Therapies for ${a.name} Visitors`)}`
     {
       path: '/blog',
       title: `Wellness Blog & Spa Articles | ${SITE_NAME} | ${where}`,
-      description: `Spa guides, massage tips and wellness articles from ${SITE_NAME} in ${where}.`,
+      description: `Explore spa therapy guides, Swedish massage benefits, aromatherapy tips, and wellness advice from ${SITE_NAME} in ${where}.`,
       schemas: [breadcrumbs([['Home', '/'], ['Blog', '/blog']])],
       body: `<h1>Spa & Wellness Journal</h1><ul>${articles
         .map((a) => `<li><a href="/blog/${esc(a.slug)}"><strong>${esc(a.title)}</strong></a><br>${esc(a.excerpt)}</li>`)
