@@ -398,6 +398,13 @@ function pageShell(data, inner) {
   return `<div style="${WRAP}">${navHtml(data)}<main>${inner}</main>${footerHtml(data)}</div>`;
 }
 
+// Banani is where the spa is; other areas are "near" pages (we do not claim a branch there).
+function locationTitle(a, site) {
+  if (a.slug === 'banani') return `Spa in Banani, Dhaka | Body Massage | ${site}`;
+  if (a.slug === 'dhaka') return `Spa & Massage Center in Dhaka | ${site}`;
+  return `Spa & Massage near ${a.name}, Dhaka | ${site}`;
+}
+
 function serviceFaqHtml(s, b) {
   const biz = b.businessName || SITE_NAME;
   const priceList = s.priceOptions.filter((o) => o.duration && o.price).map((o) => `${o.duration}: ${o.price}`).join(', ');
@@ -487,8 +494,8 @@ async function main() {
   add(
     {
       path: '/',
-      title: `${SITE_NAME} | Spa & Massage Center in ${where}`,
-      description: `${SITE_NAME}, ${where}: Swedish, deep tissue, hot stone, aromatherapy and oil massage. Open daily 10 AM–10 PM. Call or WhatsApp ${b.displayPhone}.`,
+      title: `Spa in ${where} | Body Massage | ${SITE_NAME}`,
+      description: `Spa in ${where}: body massage, Swedish, deep tissue, hot stone and aromatherapy massage at ${SITE_NAME}. Open daily 10 AM–10 PM. WhatsApp ${b.displayPhone}.`,
       image: '/photos/logo.jpg',
       schemas: faqs.length
         ? [
@@ -590,7 +597,7 @@ ${others.length ? serviceListHtml(others, `Other Spa Treatments in ${b.area}`) :
     add(
       {
         path: p,
-        title: a.seoTitle || `Spa & Massage Center in ${a.name}, Dhaka | ${SITE_NAME}`,
+        title: a.seoTitle || locationTitle(a, SITE_NAME),
         description: a.metaDescription || a.shortDescription,
         schemas: [breadcrumbs([['Home', '/'], [a.name, p]])],
         body: `<p><a href="/">Home</a> › ${esc(a.name)}</p>
