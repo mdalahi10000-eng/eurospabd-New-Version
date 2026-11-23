@@ -171,8 +171,8 @@ useEffect(() => {
 useEffect(() => {
   if (match.route === 'home' && match.params.slug === 'services') {
     updatePageSeo({
-      title: `Spa & Massage Services and Prices in Banani, Dhaka | ${SEO_CONFIG.siteName}`,
-      description: `All spa and massage treatments at ${SEO_CONFIG.siteName} in Banani, Dhaka with durations and prices.`,
+      title: `Massage Services & Prices in Banani, Dhaka | ${SEO_CONFIG.siteName}`,
+      description: `All spa and massage treatments at ${SEO_CONFIG.siteName} in Banani, Dhaka with durations and prices. Swedish, deep tissue, hot stone, aromatherapy, dry and oil massage.`,
       canonicalUrl: buildCanonicalUrl('/services'),
       ogImage: SEO_CONFIG.defaultOgImage,
       ogType: 'website'
