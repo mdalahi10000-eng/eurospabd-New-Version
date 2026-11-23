@@ -346,7 +346,7 @@ export function AdminServiceEditor({
       metaDescription: metaDescription.trim() || shortDescription.trim(),
       focusKeyword: focusKeyword.trim() || `${name.trim().toLowerCase()} banani`,
       secondaryKeywords: secondaryKeywords,
-      canonicalUrl: canonicalUrl.trim() || `https://eurospacenter.com/services/${slug.trim()}`,
+      canonicalUrl: canonicalUrl.trim() || `https://eurospabd.com/services/${slug.trim()}`,
       robotsIndex: robotsIndex,
       robotsFollow: robotsFollow,
       ogTitle: ogTitle.trim() || seoTitle.trim() || `${name.trim()} | ${SPA_INFO.name}`,
@@ -545,7 +545,7 @@ export function AdminServiceEditor({
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                Public URL: <span className="text-slate-600 font-mono">https://eurospacenter.com/services/{slug || 'service-slug'}</span>
+                Public URL: <span className="text-slate-600 font-mono">https://eurospabd.com/services/{slug || 'service-slug'}</span>
               </p>
             </div>
 

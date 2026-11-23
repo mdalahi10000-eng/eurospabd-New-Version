@@ -19,7 +19,7 @@ export function AdminSeoPreview({
   content = ''
 }: AdminSeoPreviewProps) {
   const displayTitle = title ? `${title} | ${SPA_INFO.name} Banani` : `Article Title | ${SPA_INFO.name} Banani`;
-  const displayUrl = `https://eurospacenter.com/blog/${slug || 'article-slug'}`;
+  const displayUrl = `https://eurospabd.com/blog/${slug || 'article-slug'}`;
   const displayDesc = metaDescription || 'Add a meta description to preview how your article appears in search engine results and social platforms.';
 
   // Focus keyword checks
@@ -110,12 +110,12 @@ export function AdminSeoPreview({
               </div>
             )}
             <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-white text-[10px] font-semibold">
-              eurospacenter.com
+              eurospabd.com
             </div>
           </div>
           <div className="p-3 bg-white space-y-1">
             <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-              eurospacenter.com
+              eurospabd.com
             </div>
             <h5 className="text-xs font-bold text-slate-900 line-clamp-1">
               {title || 'Article Title'}
