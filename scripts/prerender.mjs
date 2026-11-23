@@ -398,6 +398,18 @@ function pageShell(data, inner) {
   return `<div style="${WRAP}">${navHtml(data)}<main>${inner}</main>${footerHtml(data)}</div>`;
 }
 
+function serviceFaqHtml(s, b) {
+  const biz = b.businessName || SITE_NAME;
+  const priceList = s.priceOptions.filter((o) => o.duration && o.price).map((o) => `${o.duration}: ${o.price}`).join(', ');
+  const faqs = [
+    [`Where can I book ${s.name} near Banani and Gulshan?`, `${biz} is at ${b.fullAddress}, close to Gulshan. Use Get Directions to open the location in Google Maps.`],
+    ...(priceList ? [[`How much does ${s.name} cost in ${b.area}?`, `${s.name} prices at ${biz}: ${priceList}.`]] : []),
+    ['What are your opening hours?', `We are open ${b.displayHours}.`],
+    [`How do I book ${s.name}?`, `Press Book This Treatment, or call or WhatsApp us on ${b.displayPhone || b.phone}.`]
+  ];
+  return `<h2>${esc(s.name)} in ${esc(b.area)} – Common Questions</h2>${faqs.map(([q, a]) => `<h3>${esc(q)}</h3><p>${esc(a)}</p>`).join('')}`;
+}
+
 function serviceListHtml(services, heading = 'Our Spa & Massage Services') {
   return `<h2>${esc(heading)}</h2><ul>${services
     .map(
@@ -564,6 +576,7 @@ ${s.image ? `<img src="${esc(s.image)}" alt="${esc(s.imageAlt || `${s.name} at $
 ${paragraphs.length ? `<h2>What to Expect from ${esc(s.name)} at ${esc(SITE_NAME)}</h2>${paragraphs.map((t) => `<p>${esc(t)}</p>`).join('')}` : ''}
 ${s.priceOptions.length ? `<h2>${esc(s.name)} Price in ${esc(where)}</h2><ul>${s.priceOptions.map((o) => `<li>${esc(o.duration)}: ${esc(o.price)}</li>`).join('')}</ul>` : ''}
 ${s.benefits.length ? `<h2>Benefits of ${esc(s.name)}</h2><ul>${s.benefits.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+${serviceFaqHtml(s, b)}
 ${others.length ? serviceListHtml(others, `Other Spa Treatments in ${b.area}`) : ''}`
       },
       isoDate(s.updatedAt),
