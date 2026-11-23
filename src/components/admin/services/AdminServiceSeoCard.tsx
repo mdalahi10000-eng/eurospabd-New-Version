@@ -87,7 +87,7 @@ export function AdminServiceSeoCard({
 
   const displayTitle = seoTitle || (name ? `${name} in Banani, Dhaka | ${SPA_INFO.name}` : `Service Name | ${SPA_INFO.name}`);
   const displayDesc = metaDescription || shortDescription || 'Professional spa therapy and wellness massage at Euro Spa Center Banani.';
-  const displayUrl = canonicalUrl || `https://eurospacenter.com/services/${slug || 'service-slug'}`;
+  const displayUrl = canonicalUrl || `https://eurospabd.com/services/${slug || 'service-slug'}`;
   const displayOgImage = ogImage || image;
 
   // SEO Checklist Analysis
@@ -341,7 +341,7 @@ export function AdminServiceSeoCard({
               type="text"
               value={canonicalUrl}
               onChange={(e) => setCanonicalUrl(e.target.value)}
-              placeholder={`https://eurospacenter.com/services/${slug || 'service-slug'}`}
+              placeholder={`https://eurospabd.com/services/${slug || 'service-slug'}`}
               className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-hidden font-mono text-[11px]"
             />
           </div>
@@ -516,12 +516,12 @@ export function AdminServiceSeoCard({
                 </div>
               )}
               <span className="absolute bottom-2 left-2 bg-black/60 backdrop-blur-xs text-white text-[9px] px-1.5 py-0.5 rounded font-mono">
-                eurospacenter.com
+                eurospabd.com
               </span>
             </div>
             <div className="p-3 space-y-1 text-xs">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                eurospacenter.com
+                eurospabd.com
               </span>
               <h5 className="font-bold text-slate-900 line-clamp-1">{ogTitle || displayTitle}</h5>
               <p className="text-slate-600 line-clamp-2 text-[11px]">{ogDescription || displayDesc}</p>

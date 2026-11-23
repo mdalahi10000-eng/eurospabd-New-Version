@@ -259,7 +259,7 @@ export function AdminArticleEditor({
       seoTitle: seoTitle.trim() || `${title.trim()} | ${SPA_INFO.name} Banani`,
       metaDescription: metaDescription.trim() || excerpt.trim(),
       focusKeyword: focusKeyword.trim(),
-      canonicalUrl: canonicalUrl.trim() || `https://eurospacenter.com/blog/${slug.trim()}`,
+      canonicalUrl: canonicalUrl.trim() || `https://eurospabd.com/blog/${slug.trim()}`,
       ogTitle: ogTitle.trim() || seoTitle.trim() || title.trim(),
       ogDescription: ogDescription.trim() || metaDescription.trim() || excerpt.trim(),
       ogImage: ogImage.trim() || featuredImage || '',
@@ -462,7 +462,7 @@ export function AdminArticleEditor({
                 </div>
               </div>
               <p className="text-[11px] text-slate-400 mt-1">
-                Public URL: <span className="text-slate-600 font-mono">https://eurospacenter.com/blog/{slug || 'your-slug'}</span>
+                Public URL: <span className="text-slate-600 font-mono">https://eurospabd.com/blog/{slug || 'your-slug'}</span>
               </p>
             </div>
 
@@ -1037,7 +1037,7 @@ Call or visit Euro Spa Center in Banani to book your personalized session!"
                     type="text"
                     value={canonicalUrl}
                     onChange={(e) => setCanonicalUrl(e.target.value)}
-                    placeholder={`https://eurospacenter.com/blog/${slug || 'article-slug'}`}
+                    placeholder={`https://eurospabd.com/blog/${slug || 'article-slug'}`}
                     className="w-full px-3 py-2 bg-slate-50 focus:bg-white border border-slate-200 rounded-xl text-slate-800 focus:outline-hidden font-mono text-[11px]"
                   />
                 </div>

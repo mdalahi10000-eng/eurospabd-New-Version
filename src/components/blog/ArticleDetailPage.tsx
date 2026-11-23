@@ -39,7 +39,16 @@ export function ArticleDetailPage({ slug, onBookNowClick, onWhatsAppClick }: Art
       .then(async (art) => {
         setArticle(art);
         if (art && art.status === 'published') {
-          const canonicalUrl = art.canonicalUrl || buildCanonicalUrl(`/blog/${art.slug}`);
+          // Only trust a stored canonical if it is on this site; older admin defaults pointed to another domain.
+          const ownCanonical = buildCanonicalUrl(`/blog/${art.slug}`);
+          let canonicalUrl = ownCanonical;
+          try {
+            if (art.canonicalUrl && new URL(art.canonicalUrl).hostname === new URL(ownCanonical).hostname) {
+              canonicalUrl = art.canonicalUrl;
+            }
+          } catch {
+            canonicalUrl = ownCanonical;
+          }
           const ogImageUrl = art.ogImage || (art.featuredImage?.startsWith('http') 
             ? art.featuredImage 
             : `${SEO_CONFIG.canonicalBaseUrl}${art.featuredImage || '/photos/logo.jpg'}`);
