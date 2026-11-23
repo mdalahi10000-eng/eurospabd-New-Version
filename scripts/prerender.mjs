@@ -405,6 +405,14 @@ function locationTitle(a, site) {
   return `Spa & Massage near ${a.name}, Dhaka | ${site}`;
 }
 
+// Short, search-friendly fallback (the stored short description can be a full paragraph).
+function locationDescription(a, b) {
+  const hours = 'Open daily 10 AM–10 PM';
+  if (a.slug === 'banani') return `Spa in Banani, Dhaka: body massage, Swedish, deep tissue, hot stone and aromatherapy at ${SITE_NAME}, 73 Road No. 6. ${hours}. WhatsApp ${b.displayPhone}.`;
+  if (a.slug === 'dhaka') return `${SITE_NAME}: spa and massage center in Banani, Dhaka. Swedish, deep tissue, hot stone and aromatherapy massage. ${hours}. WhatsApp ${b.displayPhone}.`;
+  return `Spa & massage near ${a.name}, Dhaka: ${SITE_NAME} is at 73 Road No. 6, Banani. Swedish, deep tissue, hot stone and aromatherapy massage. ${hours}.`;
+}
+
 function serviceFaqHtml(s, b) {
   const biz = b.businessName || SITE_NAME;
   const priceList = s.priceOptions.filter((o) => o.duration && o.price).map((o) => `${o.duration}: ${o.price}`).join(', ');
@@ -598,7 +606,7 @@ ${others.length ? serviceListHtml(others, `Other Spa Treatments in ${b.area}`) :
       {
         path: p,
         title: a.seoTitle || locationTitle(a, SITE_NAME),
-        description: a.metaDescription || a.shortDescription,
+        description: a.metaDescription || locationDescription(a, b),
         schemas: [breadcrumbs([['Home', '/'], [a.name, p]])],
         body: `<p><a href="/">Home</a> › ${esc(a.name)}</p>
 <h1>${esc(a.seoTitle || `Spa & Massage Therapy in ${a.name}, Dhaka`)}</h1>

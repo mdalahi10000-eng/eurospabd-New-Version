@@ -59,7 +59,12 @@ export function LocationDetailPage({
     if (!area) return;
 
     const pageTitle = area.seoTitle || (area.slug === 'banani' ? `Spa in Banani, Dhaka | Body Massage | ${businessInfo.businessName || SEO_CONFIG.siteName}` : area.slug === 'dhaka' ? `Spa & Massage Center in Dhaka | ${businessInfo.businessName || SEO_CONFIG.siteName}` : `Spa & Massage near ${area.name}, Dhaka | ${businessInfo.businessName || SEO_CONFIG.siteName}`);
-    const pageDescription = area.metaDescription || area.shortDescription || businessInfo.description || SEO_CONFIG.defaultMetaDescription;
+    const pageDescription = area.metaDescription ||
+      (area.slug === 'banani'
+        ? `Spa in Banani, Dhaka: body massage, Swedish, deep tissue, hot stone and aromatherapy at ${businessInfo.businessName || SEO_CONFIG.siteName}, 73 Road No. 6. Open daily 10 AM–10 PM. WhatsApp ${businessInfo.displayPhone}.`
+        : area.slug === 'dhaka'
+          ? area.shortDescription || SEO_CONFIG.defaultMetaDescription
+          : `Spa & massage near ${area.name}, Dhaka: ${businessInfo.businessName || SEO_CONFIG.siteName} is at 73 Road No. 6, Banani. Swedish, deep tissue, hot stone and aromatherapy massage. Open daily 10 AM–10 PM.`);
     const canonicalUrl = buildCanonicalUrl(`/locations/${area.slug}`);
 
     // Centralized SEO meta and canonical tags
