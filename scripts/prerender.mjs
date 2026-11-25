@@ -328,8 +328,12 @@ async function loadData() {
 // ---------------------------------------------------------------------------
 // Schema builders
 // ---------------------------------------------------------------------------
+const EXTERNAL_PROFILE_URLS = [
+  'https://www.tripadvisor.com/Attraction_Review-g293936-d34838454-Reviews-Euro_Spa_Center-Dhaka_City_Dhaka_Division.html',
+];
 function businessSchema(b, areas) {
   const sameAs = Object.values(b.socialProfiles || {}).filter(Boolean);
+  sameAs.push(...EXTERNAL_PROFILE_URLS);
   if (b.googleMapsUrl) sameAs.push(b.googleMapsUrl);
   return {
     '@context': 'https://schema.org',

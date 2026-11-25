@@ -3,6 +3,7 @@ import { mapSupabaseServiceAreaToServiceArea, mapServiceAreaToSupabaseRow } from
 import { BusinessInfo, ServiceArea, RegularHours, DayOfWeek } from '../types';
 import { SPA_INFO } from '../data/spaData';
 import { getCachedData, setCachedData, CACHE_KEYS } from './cacheService';
+import { EXTERNAL_PROFILE_URLS } from '../config/seoConfig';
 
 export const DEFAULT_REGULAR_HOURS: RegularHours = {
   monday: { open: true, opens: '10:00', closes: '22:00' },
@@ -512,6 +513,7 @@ export function generateLocalBusinessSchema(
 
   const sameAs = Object.values(info.socialProfiles || {})
     .filter((url): url is string => typeof url === 'string' && url.trim().length > 0 && url.startsWith('http'));
+  EXTERNAL_PROFILE_URLS.forEach(u => { if (!sameAs.includes(u)) sameAs.push(u); });
 
   const areaServed = (activeAreas && activeAreas.length > 0)
     ? activeAreas.map(a => ({
