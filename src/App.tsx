@@ -28,25 +28,26 @@ import { ShareToast } from './components/ShareToast';
 import { subscribeToHomepageContent, HomepageContent, DEFAULT_HOMEPAGE_CONTENT, getInitialHomepageContent } from './services/homepageService';
 import { subscribeToAboutContent, AboutContent, DEFAULT_ABOUT_CONTENT, getInitialAboutContent } from './services/aboutService';
 
-import { ServiceModal } from './components/modals/ServiceModal';
-import { ReviewsModal } from './components/modals/ReviewsModal';
-import { PhotosModal } from './components/modals/PhotosModal';
-import { LocationModal } from './components/modals/LocationModal';
-import { BookNowModal } from './components/modals/BookNowModal';
-import { CallModal } from './components/modals/CallModal';
-import { MenuDrawer } from './components/modals/MenuDrawer';
 
 import { useLocationPath, navigate } from './router';
+// Secondary pages and popups are loaded on demand (smaller first download)
+const ServiceModal = lazy(() => import('./components/modals/ServiceModal').then((m) => ({ default: m.ServiceModal })));
+const ReviewsModal = lazy(() => import('./components/modals/ReviewsModal').then((m) => ({ default: m.ReviewsModal })));
+const PhotosModal = lazy(() => import('./components/modals/PhotosModal').then((m) => ({ default: m.PhotosModal })));
+const LocationModal = lazy(() => import('./components/modals/LocationModal').then((m) => ({ default: m.LocationModal })));
+const BookNowModal = lazy(() => import('./components/modals/BookNowModal').then((m) => ({ default: m.BookNowModal })));
+const CallModal = lazy(() => import('./components/modals/CallModal').then((m) => ({ default: m.CallModal })));
+const MenuDrawer = lazy(() => import('./components/modals/MenuDrawer').then((m) => ({ default: m.MenuDrawer })));
+const BlogListPage = lazy(() => import('./components/blog/BlogListPage').then((m) => ({ default: m.BlogListPage })));
+const ArticleDetailPage = lazy(() => import('./components/blog/ArticleDetailPage').then((m) => ({ default: m.ArticleDetailPage })));
+const LocationDetailPage = lazy(() => import('./components/locations/LocationDetailPage').then((m) => ({ default: m.LocationDetailPage })));
+const AboutPage = lazy(() => import('./components/AboutPage').then((m) => ({ default: m.AboutPage })));
+const ServiceDetailPage = lazy(() => import('./components/services/ServiceDetailPage').then((m) => ({ default: m.ServiceDetailPage })));
+const NotFoundPage = lazy(() => import('./components/NotFoundPage').then((m) => ({ default: m.NotFoundPage })));
 // Admin panel is loaded only when /admin is opened (keeps the public site fast)
 const AdminLayout = lazy(() =>
   import('./components/admin/AdminLayout').then((m) => ({ default: m.AdminLayout }))
 );
-import { BlogListPage } from './components/blog/BlogListPage';
-import { ArticleDetailPage } from './components/blog/ArticleDetailPage';
-import { LocationDetailPage } from './components/locations/LocationDetailPage';
-import { AboutPage } from './components/AboutPage';
-import { ServiceDetailPage } from './components/services/ServiceDetailPage';
-import { NotFoundPage } from './components/NotFoundPage';
 import { updatePageSeo, SEO_CONFIG, buildCanonicalUrl } from './config/seoConfig';
 
 export default function App() {
@@ -335,15 +336,15 @@ useEffect(() => {
   if (match.route === 'blog') {
     return (
       <>
-        <BlogListPage
+        <Suspense fallback={null}><BlogListPage
           onBookNowClick={() => {
             setBookingPreselectedService(null);
             setBookingPreselectedOption(null);
             setIsBookNowModalOpen(true);
           }}
           onWhatsAppClick={handleWhatsAppAction}
-        />
-        <BookNowModal
+        /></Suspense>
+        <Suspense fallback={null}><BookNowModal
           isOpen={isBookNowModalOpen}
           onClose={() => setIsBookNowModalOpen(false)}
           currentUser={currentUser}
@@ -355,12 +356,12 @@ useEffect(() => {
           preselectedOption={bookingPreselectedOption}
           onBookingSuccess={() => showToast('Appointment booked successfully!')}
           availableServices={services}
-        />
-        <CallModal
+        /></Suspense>
+        <Suspense fallback={null}><CallModal
           isOpen={isCallModalOpen}
           onClose={() => setIsCallModalOpen(false)}
           onWhatsAppClick={handleWhatsAppAction}
-        />
+        /></Suspense>
         <ShareToast message={toastMessage} onClose={() => setToastMessage(null)} />
       </>
     );
@@ -370,7 +371,7 @@ useEffect(() => {
   if (match.route === 'blog-detail' && match.params.slug) {
     return (
       <>
-        <ArticleDetailPage
+        <Suspense fallback={null}><ArticleDetailPage
           slug={match.params.slug}
           onBookNowClick={() => {
             setBookingPreselectedService(null);
@@ -378,8 +379,8 @@ useEffect(() => {
             setIsBookNowModalOpen(true);
           }}
           onWhatsAppClick={handleWhatsAppAction}
-        />
-        <BookNowModal
+        /></Suspense>
+        <Suspense fallback={null}><BookNowModal
           isOpen={isBookNowModalOpen}
           onClose={() => setIsBookNowModalOpen(false)}
           currentUser={currentUser}
@@ -391,12 +392,12 @@ useEffect(() => {
           preselectedOption={bookingPreselectedOption}
           onBookingSuccess={() => showToast('Appointment booked successfully!')}
           availableServices={services}
-        />
-        <CallModal
+        /></Suspense>
+        <Suspense fallback={null}><CallModal
           isOpen={isCallModalOpen}
           onClose={() => setIsCallModalOpen(false)}
           onWhatsAppClick={handleWhatsAppAction}
-        />
+        /></Suspense>
         <ShareToast message={toastMessage} onClose={() => setToastMessage(null)} />
       </>
     );
@@ -406,7 +407,7 @@ useEffect(() => {
   if (match.route === 'location-detail' && match.params.slug) {
     return (
       <>
-        <LocationDetailPage
+        <Suspense fallback={null}><LocationDetailPage
           slug={match.params.slug}
           businessInfo={businessInfo}
           services={services}
@@ -416,14 +417,14 @@ useEffect(() => {
             setIsBookNowModalOpen(true);
           }}
           onOpenCallModal={() => setIsCallModalOpen(true)}
-        />
+        /></Suspense>
         <Footer
           onWhatsAppClick={handleWhatsAppAction}
           businessInfo={businessInfo}
           serviceAreas={serviceAreas}
           services={services}
         />
-        <BookNowModal
+        <Suspense fallback={null}><BookNowModal
           isOpen={isBookNowModalOpen}
           onClose={() => setIsBookNowModalOpen(false)}
           currentUser={currentUser}
@@ -435,13 +436,13 @@ useEffect(() => {
           preselectedOption={bookingPreselectedOption}
           onBookingSuccess={() => showToast('Appointment booked successfully!')}
           availableServices={services}
-        />
-        <CallModal
+        /></Suspense>
+        <Suspense fallback={null}><CallModal
           isOpen={isCallModalOpen}
           onClose={() => setIsCallModalOpen(false)}
           onWhatsAppClick={handleWhatsAppAction}
           businessInfo={businessInfo}
-        />
+        /></Suspense>
         <ShareToast message={toastMessage} onClose={() => setToastMessage(null)} />
       </>
     );
@@ -451,7 +452,7 @@ useEffect(() => {
   if (match.route === 'service-detail' && match.params.slug) {
     return (
       <>
-        <ServiceDetailPage
+        <Suspense fallback={null}><ServiceDetailPage
           slug={match.params.slug}
           services={services}
           loading={servicesLoading}
@@ -462,14 +463,14 @@ useEffect(() => {
             setIsBookNowModalOpen(true);
           }}
           onOpenCallModal={() => setIsCallModalOpen(true)}
-        />
+        /></Suspense>
         <Footer
           onWhatsAppClick={handleWhatsAppAction}
           businessInfo={businessInfo}
           serviceAreas={serviceAreas}
           services={services}
         />
-        <BookNowModal
+        <Suspense fallback={null}><BookNowModal
           isOpen={isBookNowModalOpen}
           onClose={() => setIsBookNowModalOpen(false)}
           currentUser={currentUser}
@@ -481,13 +482,13 @@ useEffect(() => {
           preselectedOption={bookingPreselectedOption}
           onBookingSuccess={() => showToast('Appointment booked successfully!')}
           availableServices={services}
-        />
-        <CallModal
+        /></Suspense>
+        <Suspense fallback={null}><CallModal
           isOpen={isCallModalOpen}
           onClose={() => setIsCallModalOpen(false)}
           onWhatsAppClick={handleWhatsAppAction}
           businessInfo={businessInfo}
-        />
+        /></Suspense>
         <ShareToast message={toastMessage} onClose={() => setToastMessage(null)} />
       </>
     );
@@ -497,13 +498,13 @@ useEffect(() => {
   if (match.route === 'not-found') {
     return (
       <>
-        <NotFoundPage services={services} />
+        <Suspense fallback={null}><NotFoundPage services={services} />
         <Footer
           onWhatsAppClick={handleWhatsAppAction}
           businessInfo={businessInfo}
           serviceAreas={serviceAreas}
           services={services}
-        />
+        /></Suspense>
       </>
     );
   }
@@ -512,7 +513,7 @@ useEffect(() => {
   if (match.route === 'about') {
     return (
       <>
-        <AboutPage
+        <Suspense fallback={null}><AboutPage
           businessInfo={businessInfo}
           serviceAreas={serviceAreas}
           onBookNowClick={() => {
@@ -522,14 +523,14 @@ useEffect(() => {
           }}
           onWhatsAppClick={handleWhatsAppAction}
           onCallClick={() => setIsCallModalOpen(true)}
-        />
+        /></Suspense>
         <Footer
           onWhatsAppClick={handleWhatsAppAction}
           businessInfo={businessInfo}
           serviceAreas={serviceAreas}
           services={services}
         />
-        <BookNowModal
+        <Suspense fallback={null}><BookNowModal
           isOpen={isBookNowModalOpen}
           onClose={() => setIsBookNowModalOpen(false)}
           currentUser={currentUser}
@@ -541,13 +542,13 @@ useEffect(() => {
           preselectedOption={bookingPreselectedOption}
           onBookingSuccess={() => showToast('Appointment booked successfully!')}
           availableServices={services}
-        />
-        <CallModal
+        /></Suspense>
+        <Suspense fallback={null}><CallModal
           isOpen={isCallModalOpen}
           onClose={() => setIsCallModalOpen(false)}
           onWhatsAppClick={handleWhatsAppAction}
           businessInfo={businessInfo}
-        />
+        /></Suspense>
         <ShareToast message={toastMessage} onClose={() => setToastMessage(null)} />
       </>
     );
@@ -653,7 +654,7 @@ useEffect(() => {
      
 
       {/* 1. Service Details Modal (Reference Image 2 matching) */}
-      <ServiceModal
+      <Suspense fallback={null}><ServiceModal
         service={selectedService}
         whatsappNumber={businessInfo?.whatsappNumber}
         onClose={() => {
@@ -667,10 +668,10 @@ useEffect(() => {
           setBookingPreselectedOption(opt);
           setIsBookNowModalOpen(true);
         }}
-      />
+      /></Suspense>
 
       {/* 2. Reviews Modal with Scrolling & Load More for 20+ reviews */}
-      <ReviewsModal
+      <Suspense fallback={null}><ReviewsModal
         isOpen={isReviewsModalOpen}
         onClose={() => setIsReviewsModalOpen(false)}
         currentUser={currentUser}
@@ -679,27 +680,27 @@ useEffect(() => {
         syncedRating={syncedGoogleData?.rating}
         syncedCount={syncedGoogleData?.reviewsCount}
         initialWriteMode={reviewsWriteMode}
-      />
+      /></Suspense>
 
       {/* 3. Photos Gallery Modal */}
-      <PhotosModal
+      <Suspense fallback={null}><PhotosModal
         isOpen={isPhotosModalOpen}
         onClose={() => setIsPhotosModalOpen(false)}
         syncedPhotos={syncedGoogleData?.photos}
         galleryImages={galleryImages}
         initialIndex={photosInitialIndex}
-      />
+      /></Suspense>
 
       {/* 4. Location Map & Directions Modal */}
-      <LocationModal
+      <Suspense fallback={null}><LocationModal
         isOpen={isLocationModalOpen}
         onClose={() => setIsLocationModalOpen(false)}
         onCallClick={() => setIsCallModalOpen(true)}
         businessInfo={businessInfo}
-      />
+      /></Suspense>
 
       {/* 5. Book Appointment Modal */}
-      <BookNowModal
+      <Suspense fallback={null}><BookNowModal
         isOpen={isBookNowModalOpen}
         onClose={() => setIsBookNowModalOpen(false)}
         currentUser={currentUser}
@@ -711,18 +712,18 @@ useEffect(() => {
         preselectedOption={bookingPreselectedOption}
         onBookingSuccess={() => showToast('Appointment booked successfully!')}
         availableServices={services.length > 0 ? services : SERVICES_DATA}
-      />
+      /></Suspense>
 
       {/* 6. Call Reception Modal */}
-      <CallModal
+      <Suspense fallback={null}><CallModal
         isOpen={isCallModalOpen}
         onClose={() => setIsCallModalOpen(false)}
         onWhatsAppClick={handleWhatsAppAction}
         businessInfo={businessInfo}
-      />
+      /></Suspense>
 
       {/* 7. Slide Menu & Account Drawer */}
-      <MenuDrawer
+      <Suspense fallback={null}><MenuDrawer
         isOpen={isMenuDrawerOpen}
         onClose={() => setIsMenuDrawerOpen(false)}
         currentUser={currentUser}
@@ -735,7 +736,7 @@ useEffect(() => {
         onWhatsAppClick={handleWhatsAppAction}
         onCallClick={() => setIsCallModalOpen(true)}
         businessInfo={businessInfo}
-      />
+      /></Suspense>
 
       {/* Toast Notification */}
       <ShareToast message={toastMessage} onClose={() => setToastMessage(null)} />
