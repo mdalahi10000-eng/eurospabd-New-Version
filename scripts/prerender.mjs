@@ -489,6 +489,7 @@ function renderPage(template, { title, description, path: p, image, type = 'webs
   if (p === '/' && data.heroImage) {
     const hero = optimizedHeroUrl(data.heroImage);
     if (hero) {
+      html = html.replace('</head>', `    <script>window.__HERO_IMAGE__=${JSON.stringify(data.heroImage).replace(/</g, '\\u003c')};</script>\n  </head>`);
       html = html.replace('</head>', `    <link rel="preload" as="image" href="${esc(hero)}" fetchpriority="high" referrerpolicy="no-referrer" />\n  </head>`);
     }
   }
