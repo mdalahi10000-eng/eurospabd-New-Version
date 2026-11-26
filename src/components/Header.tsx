@@ -1,3 +1,4 @@
+import { optimizeImageUrl } from '../utils/imageUrl';
 import { MapPin, Star, Navigation, Calendar, Phone, Share2, Menu, Sparkles } from 'lucide-react';
 import { SPA_INFO } from '../data/spaData';
 import { BusinessInfo } from '../types';
@@ -98,14 +99,20 @@ export function Header({
       {/* Hero Banner with Clean Minimalist Overlay */}
       <div className="relative w-full h-52 sm:h-60 md:h-64 overflow-hidden bg-gray-900">
         <img
-          src={heroImage}
+          src={optimizeImageUrl(heroImage, 1200, 75)}
           alt={heroAlt}
           referrerPolicy="no-referrer"
           loading="eager"
           fetchPriority="high"
           decoding="async"
           onError={(e) => {
-            (e.target as HTMLImageElement).src = "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w800-h450-k-no";
+            const el = e.target as HTMLImageElement;
+            if (el.src !== heroImage && !el.dataset.triedOriginal) {
+              el.dataset.triedOriginal = '1';
+              el.src = heroImage;
+              return;
+            }
+            el.src = "https://lh3.googleusercontent.com/geougc/AF1QipPLNOXvJcErsUyF-6Jorv4EaoC6kDl3WaDnpL6W=w800-h450-k-no";
           }}
           className="w-full h-full object-cover object-center"
         />
