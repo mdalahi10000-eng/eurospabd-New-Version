@@ -384,6 +384,9 @@ const breadcrumbs = (items) => ({
 // ---------------------------------------------------------------------------
 const WRAP = 'max-width:960px;margin:0 auto;padding:24px 16px;font-family:system-ui,sans-serif;color:#111827;line-height:1.6';
 
+const VISUALLY_HIDDEN = 'position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0';
+const BOOT_CSS = '<style>.boot-loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#f9fafb}.boot-loader:after{content:"";width:34px;height:34px;border:3px solid #e5e7eb;border-top-color:#2563eb;border-radius:50%;animation:bootspin .8s linear infinite}@keyframes bootspin{to{transform:rotate(360deg)}}</style>';
+
 function navHtml(data) {
   const svc = data.services.map((s) => `<a href="/services/${esc(s.slug)}">${esc(s.name)}</a>`).join(' · ');
   return `<nav aria-label="Main" style="font-size:14px;margin-bottom:16px"><a href="/">Home</a> · <a href="/services">Services</a> · <a href="/blog">Blog</a> · <a href="/about">About Us</a><br>${svc}</nav>`;
@@ -401,7 +404,9 @@ ${posts ? `<p>Latest articles:</p><ul>${posts}</ul>` : ''}
 }
 
 function pageShell(data, inner) {
-  return `<div style="${WRAP}">${navHtml(data)}<main>${inner}</main>${footerHtml(data)}</div>`;
+  // The text shell is for crawlers/no-JS readers: keep it in the DOM but visually hidden so visitors
+  // see a clean loader (not raw text) until the app renders. React replaces all of this on mount.
+  return `<div class="boot-loader" aria-hidden="true"></div><div style="${VISUALLY_HIDDEN}"><div style="${WRAP}">${navHtml(data)}<main>${inner}</main>${footerHtml(data)}</div></div>`;
 }
 
 // Banani is where the spa is; other areas are "near" pages (we do not claim a branch there).
@@ -499,6 +504,7 @@ function renderPage(template, { title, description, path: p, image, type = 'webs
       `    <script type="application/ld+json" id="prerender-page-schema">${JSON.stringify(schemas).replace(/</g, '\\u003c')}</script>\n  </head>`
     );
   }
+  html = html.replace('</head>', `    ${BOOT_CSS}\n  </head>`);
   html = html.replace(/<div id="root"><\/div>/, `<div id="root">${pageShell(data, body)}</div>`);
   return html;
 }
