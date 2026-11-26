@@ -125,6 +125,12 @@ export function getInitialHomepageContent(): HomepageContent {
       }
     };
   }
+  // First visit (no cache): use the hero image the build embedded in the page, so the first
+  // render already shows the real banner instead of swapping the default one later.
+  const buildHero = typeof window !== 'undefined' ? (window as any).__HERO_IMAGE__ : undefined;
+  if (typeof buildHero === 'string' && buildHero.trim()) {
+    return { ...DEFAULT_HOMEPAGE_CONTENT, heroBannerImage: buildHero };
+  }
   return DEFAULT_HOMEPAGE_CONTENT;
 }
 
