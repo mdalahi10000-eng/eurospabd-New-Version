@@ -677,8 +677,8 @@ useEffect(() => {
         currentUser={currentUser}
         communityReviews={communityReviews}
         syncedReviews={syncedGoogleData?.reviews}
-        syncedRating={syncedGoogleData?.rating}
-        syncedCount={syncedGoogleData?.reviewsCount}
+        syncedRating={homepageContent?.ratingOverride ?? syncedGoogleData?.rating}
+        syncedCount={homepageContent?.reviewsCountOverride ?? syncedGoogleData?.reviewsCount}
         initialWriteMode={reviewsWriteMode}
       /></Suspense>
 
