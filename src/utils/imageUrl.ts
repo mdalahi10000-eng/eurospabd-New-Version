@@ -9,7 +9,7 @@ export function optimizeImageUrl(url: string | undefined | null, width: number, 
   try {
     if (/^https:\/\/lh\d\.googleusercontent\.com\//.test(url)) {
       const base = url.replace(/=[wsh]\d[^/]*$/, '');
-      return `${base}=w${width}`;
+      return `${base}=w${width}-rw`;
     }
     const u = new URL(url);
     if (u.hostname.endsWith('.supabase.co') && u.pathname.includes('/storage/v1/object/public/')) {

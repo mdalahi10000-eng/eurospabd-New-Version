@@ -75,7 +75,7 @@ export function PhotosSection({ onOpenPhotosModal, syncedPhotos, galleryImages, 
             className="group relative shrink-0 w-[42%] sm:w-[32%] md:w-[24%] aspect-4/3 rounded-xl overflow-hidden bg-gray-100 border border-gray-200 hover:border-blue-400 shadow-2xs hover:shadow-xs transition-all active:scale-97 cursor-pointer focus:outline-none snap-start"
           >
             <img
-              src={optimizeImageUrl(photo.image, 600)}
+              src={optimizeImageUrl(photo.image, 450)}
               alt={photo.altText || photo.title}
               referrerPolicy="no-referrer"
               loading="lazy"
