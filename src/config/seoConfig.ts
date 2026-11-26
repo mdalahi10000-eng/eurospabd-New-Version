@@ -6,6 +6,7 @@
 // Verified third-party listings of the business (added to schema sameAs).
 export const EXTERNAL_PROFILE_URLS: string[] = [
   'https://www.tripadvisor.com/Attraction_Review-g293936-d34838454-Reviews-Euro_Spa_Center-Dhaka_City_Dhaka_Division.html',
+  'https://foursquare.com/v/euro-spa-center/6b040d8399166055afe29626',
 ];
 
 export const SEO_CONFIG = {
