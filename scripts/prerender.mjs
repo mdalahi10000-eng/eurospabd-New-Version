@@ -265,7 +265,7 @@ const DEFAULT_BUSINESS = {
   priceRange: 'BDT 3,500 - 15,000',
   paymentAccepted: 'Cash, bKash, Credit Card, Debit Card',
   socialProfiles: {
-    facebook: 'https://www.facebook.com/profile.php?id=61592822445077',
+    facebook: 'https://www.facebook.com/profile.php?id=61594146224366',
     instagram: 'https://www.instagram.com/euro.spa.center/'
   }
 };

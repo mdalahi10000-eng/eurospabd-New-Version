@@ -11,7 +11,7 @@ interface FooterProps {
 
 export function Footer({ onWhatsAppClick, businessInfo, serviceAreas, services }: FooterProps) {
   const name = businessInfo?.businessName || SPA_INFO.name;
-  const facebookUrl = businessInfo?.socialProfiles.facebook || 'https://www.facebook.com/profile.php?id=61592822445077';
+  const facebookUrl = businessInfo?.socialProfiles.facebook || 'https://www.facebook.com/profile.php?id=61594146224366';
   const instagramUrl = businessInfo?.socialProfiles.instagram || 'https://www.instagram.com/euro.spa.center/';
   const whatsappNum = SPA_INFO.whatsappNumber;
 
