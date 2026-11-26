@@ -1,3 +1,4 @@
+import { optimizeImageUrl } from '../utils/imageUrl';
 import { ChevronRight } from 'lucide-react';
 import { Service } from '../types';
 import { Link } from './Link';
@@ -69,7 +70,7 @@ export function ServicesSection({
               {/* Image */}
               <div className="relative h-24 sm:h-28 w-full overflow-hidden bg-gray-100">
                 <img
-                  src={service.image}
+                  src={optimizeImageUrl(service.image, 400)}
                   alt={service.imageAlt || service.name}
                   referrerPolicy="no-referrer"
                   loading="lazy"
