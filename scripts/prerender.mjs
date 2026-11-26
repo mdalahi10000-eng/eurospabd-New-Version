@@ -287,12 +287,13 @@ function normBusiness(d) {
 
 async function loadData() {
   try {
-    const [services, articles, areas, settings, faqs] = await Promise.all([
+    const [services, articles, areas, settings, faqs, homepage] = await Promise.all([
       supabaseGet('services', 'select=*&status=eq.active&order=display_order.asc'),
       supabaseGet('articles', 'select=*&status=eq.published'),
       supabaseGet('service_areas', 'select=*&status=eq.active&order=display_order.asc'),
       supabaseGet('site_settings', 'select=data&id=eq.business'),
-      supabaseGet('faqs', 'select=*&order=sort_order.asc').catch(() => [])
+      supabaseGet('faqs', 'select=*&order=sort_order.asc').catch(() => []),
+      supabaseGet('site_settings', 'select=data&id=eq.homepage').catch(() => [])
     ]);
     if (!services.length) throw new Error('no services returned');
     console.log('[prerender] Loaded live data from Supabase');
@@ -302,7 +303,8 @@ async function loadData() {
       articles: articles.map(normArticle),
       areas: areas.map(normArea),
       business: normBusiness(settings[0]?.data),
-      faqs: faqs.map(normFaq).filter((f) => f.status === 'active' && f.question)
+      faqs: faqs.map(normFaq).filter((f) => f.status === 'active' && f.question),
+      heroImage: String(homepage?.[0]?.data?.heroBannerImage || '').trim()
     };
   } catch (err) {
     console.warn(`[prerender] Supabase unavailable (${err.message}); using scripts/migration/data fallback`);
@@ -447,6 +449,21 @@ function setMeta(html, attr, name, content) {
   return re.test(html) ? html.replace(re, tag) : html.replace('</head>', `    ${tag}\n  </head>`);
 }
 
+// Mirrors optimizeImageUrl() in src/utils/imageUrl.ts (hero: width 1200, quality 75)
+function optimizedHeroUrl(url) {
+  try {
+    if (/^https:\/\/lh\d\.googleusercontent\.com\//.test(url)) return `${url.replace(/=[wsh]\d[^/]*$/, '')}=w1200-rw`;
+    const u = new URL(url);
+    if (u.hostname.endsWith('.supabase.co') && u.pathname.includes('/storage/v1/object/public/') && !/\.(svg|gif)$/i.test(u.pathname)) {
+      u.pathname = u.pathname.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/');
+      u.searchParams.set('width', '1200');
+      u.searchParams.set('quality', '75');
+      return u.toString();
+    }
+  } catch { /* ignore */ }
+  return '';
+}
+
 function renderPage(template, { title, description, path: p, image, type = 'website', schemas = [], body, robots = 'index, follow' }, data) {
   let html = template;
   const url = canonical(p);
@@ -469,6 +486,12 @@ function renderPage(template, { title, description, path: p, image, type = 'webs
     /<script type="application\/ld\+json" id="euro-spa-local-business-schema">[\s\S]*?<\/script>/,
     `<script type="application/ld+json" id="euro-spa-local-business-schema">${biz}</script>`
   );
+  if (p === '/' && data.heroImage) {
+    const hero = optimizedHeroUrl(data.heroImage);
+    if (hero) {
+      html = html.replace('</head>', `    <link rel="preload" as="image" href="${esc(hero)}" fetchpriority="high" referrerpolicy="no-referrer" />\n  </head>`);
+    }
+  }
   if (schemas.length) {
     html = html.replace(
       '</head>',
